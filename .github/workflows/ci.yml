@@ -19,6 +19,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install -e .
+      - run: python -m pip install -e .[dev]
       - run: python -m unittest discover -s tests -v
       - run: python -m compileall -q src
+      - run: ruff check src tests
+      - run: ruff format --check src tests
