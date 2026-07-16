@@ -9,6 +9,7 @@ from string import Formatter
 from typing import Iterable
 
 from .config import Convention
+from .csvsafe import safe_row
 from .links import build_url
 
 
@@ -82,5 +83,5 @@ def batch_csv(
         with destination.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
             writer.writeheader()
-            writer.writerows(rows)
+            writer.writerows(safe_row(row) for row in rows)
     return rows, summary
