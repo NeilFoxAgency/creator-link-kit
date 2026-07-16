@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "base_url": "https://shop.example.com/glowdrop",
+  "owned_domains": ["example.com"],
+  "casing": "lowercase",
+  "max_value_length": 80,
+  "required": ["utm_source", "utm_medium", "utm_campaign"],
+  "parameters": {
+    "utm_source": {"allowed": ["youtube", "instagram", "tiktok", "newsletter"]},
+    "utm_medium": {"allowed": ["influencer", "social", "email", "cpc"]},
+    "utm_campaign": {"pattern": "^[a-z0-9][a-z0-9-]{2,48}$"},
+    "utm_content": {"pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"}
+  },
+  "defaults": {"utm_medium": "influencer"},
+  "batch": {
+    "param_map": {
+      "utm_source": "{platform}",
+      "utm_medium": "influencer",
+      "utm_campaign": "glowdrop-launch",
+      "utm_content": "{handle}"
+    },
+    "url_column": "landing_url"
+  }
+}
