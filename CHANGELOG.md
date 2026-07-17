@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Reject links with invalid ports or embedded URL credentials during build and audit.
+
 ## 0.1.0 - 2026-07-16
 
 - Added convention-as-code JSON configuration with optional YAML support.
