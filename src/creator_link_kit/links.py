@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from difflib import get_close_matches
 import re
 from typing import Iterable, Mapping
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit, urlunsplit
 
 from .config import Convention
 
@@ -54,6 +54,16 @@ class AuditResult:
 def _domain_is_owned(host: str, owned_domains: tuple[str, ...]) -> bool:
     host = host.lower().rstrip(".")
     return any(host == domain or host.endswith("." + domain) for domain in owned_domains)
+
+
+def _authority_error(parsed: SplitResult) -> str | None:
+    if parsed.username is not None or parsed.password is not None:
+        return "URL must not include embedded credentials"
+    try:
+        parsed.port
+    except ValueError as exc:
+        return f"URL has an invalid port: {exc}"
+    return None
 
 
 def validate_params(
@@ -149,6 +159,9 @@ def validate_url(url: str, convention: Convention) -> list[Issue]:
                 url=url,
             )
         ]
+    authority_error = _authority_error(parsed)
+    if authority_error is not None:
+        return [Issue("CLK001", "error", authority_error, url=url)]
     if parsed.scheme == "http":
         issues.append(Issue("CLK002", "warning", "URL uses http instead of https"))
     if convention.owned_domains and not _domain_is_owned(
@@ -194,6 +207,9 @@ def build_url(
     parsed = urlsplit(base_url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ValueError("base URL must be an absolute http or https URL")
+    authority_error = _authority_error(parsed)
+    if authority_error is not None:
+        raise ValueError(authority_error)
 
     existing_pairs = parse_qsl(parsed.query, keep_blank_values=True)
     existing_keys = {key for key, _ in existing_pairs}
@@ -225,7 +241,7 @@ def _canonical_link(url: str) -> tuple[str, tuple[tuple[str, str], ...]] | None:
         parsed = urlsplit(url)
     except ValueError:
         return None
-    if not parsed.netloc:
+    if not parsed.netloc or _authority_error(parsed) is not None:
         return None
     pairs = parse_qsl(parsed.query, keep_blank_values=True)
     utm_pairs = tuple(sorted((k, v) for k, v in pairs if k.startswith("utm_")))

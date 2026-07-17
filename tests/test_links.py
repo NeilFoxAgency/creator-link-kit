@@ -29,6 +29,22 @@ class LinkTests(unittest.TestCase):
                 self.convention,
             )
 
+    def test_build_rejects_invalid_port(self):
+        with self.assertRaisesRegex(ValueError, "invalid port"):
+            build_url(
+                "https://shop.example.com:not-a-port/product",
+                {"utm_source": "youtube", "utm_campaign": "spring-launch"},
+                self.convention,
+            )
+
+    def test_build_rejects_embedded_credentials(self):
+        with self.assertRaisesRegex(ValueError, "embedded credentials"):
+            build_url(
+                "https://user:secret@shop.example.com/product",
+                {"utm_source": "youtube", "utm_campaign": "spring-launch"},
+                self.convention,
+            )
+
     def test_case_near_miss(self):
         issues = validate_url(
             "https://shop.example.com/product?utm_source=YouTube&utm_medium=influencer&utm_campaign=spring-launch",
@@ -73,6 +89,22 @@ class LinkTests(unittest.TestCase):
             self.convention,
         )
         self.assertNotIn("CLK003", {issue.code for issue in issues})
+
+    def test_invalid_port_is_a_parse_error(self):
+        issues = validate_url(
+            "https://shop.example.com:not-a-port/product?utm_source=youtube&utm_medium=influencer&utm_campaign=spring-launch",
+            self.convention,
+        )
+        self.assertEqual([issue.code for issue in issues], ["CLK001"])
+        self.assertIn("invalid port", issues[0].message)
+
+    def test_embedded_credentials_are_a_parse_error(self):
+        issues = validate_url(
+            "https://user:secret@shop.example.com/product?utm_source=youtube&utm_medium=influencer&utm_campaign=spring-launch",
+            self.convention,
+        )
+        self.assertEqual([issue.code for issue in issues], ["CLK001"])
+        self.assertIn("embedded credentials", issues[0].message)
 
     def test_duplicate_detection(self):
         url = "https://shop.example.com/product?utm_source=youtube&utm_medium=influencer&utm_campaign=spring-launch"
