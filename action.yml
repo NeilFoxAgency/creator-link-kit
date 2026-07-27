@@ -1,0 +1,75 @@
+name: "Creator Link Kit Audit"
+description: "Audit creator campaign links against a convention-as-code file using clk"
+author: "Neil Fox Agency"
+
+branding:
+  icon: "link"
+  color: "blue"
+
+inputs:
+  config:
+    description: "Path to the convention JSON/YAML file"
+    required: true
+  input:
+    description: "Path to the CSV or text file of links to audit"
+    required: true
+  url-column:
+    description: "CSV column that holds the URL (optional; auto-detected when possible)"
+    required: false
+    default: ""
+  format:
+    description: "Report format: text, json, or csv"
+    required: false
+    default: "text"
+  strict:
+    description: "Treat warnings as errors (true/false)"
+    required: false
+    default: "false"
+  python-version:
+    description: "Python version used to run clk"
+    required: false
+    default: "3.12"
+  version:
+    description: "creator-link-kit version to install (empty = latest from PyPI, or 'local' to install from this repository)"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install creator-link-kit
+      shell: bash
+      run: |
+        set -euo pipefail
+        python -m pip install --upgrade pip
+        if [ "${{ inputs.version }}" = "local" ]; then
+          python -m pip install -e "${{ github.action_path }}"
+        elif [ -n "${{ inputs.version }}" ]; then
+          python -m pip install "creator-link-kit==${{ inputs.version }}"
+        else
+          # Prefer the action's own tree when the action is checked out from
+          # this repository; otherwise install the published package.
+          if [ -f "${{ github.action_path }}/pyproject.toml" ]; then
+            python -m pip install -e "${{ github.action_path }}"
+          else
+            python -m pip install creator-link-kit
+          fi
+        fi
+
+    - name: Run clk audit
+      shell: bash
+      run: |
+        set -euo pipefail
+        ARGS=(audit --config "${{ inputs.config }}" --input "${{ inputs.input }}" --format "${{ inputs.format }}")
+        if [ -n "${{ inputs.url-column }}" ]; then
+          ARGS+=(--url-column "${{ inputs.url-column }}")
+        fi
+        if [ "${{ inputs.strict }}" = "true" ]; then
+          ARGS+=(--strict)
+        fi
+        clk "${ARGS[@]}"
