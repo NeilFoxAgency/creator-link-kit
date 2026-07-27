@@ -12,7 +12,7 @@ from . import __version__
 from .batch import batch_csv
 from .config import ConfigError, load_convention, starter_convention
 from .links import audit_urls, build_url
-from .report import to_csv, to_json, to_text
+from .report import to_csv, to_html, to_json, to_text
 
 
 def _param(value: str) -> tuple[str, str]:
@@ -79,7 +79,9 @@ def build_parser() -> argparse.ArgumentParser:
     audit_parser.add_argument("--config", required=True)
     audit_parser.add_argument("--input", required=True)
     audit_parser.add_argument("--url-column")
-    audit_parser.add_argument("--format", choices=("text", "json", "csv"), default="text")
+    audit_parser.add_argument(
+        "--format", choices=("text", "json", "csv", "html"), default="text"
+    )
     audit_parser.add_argument("--out")
     audit_parser.add_argument("--strict", action="store_true")
 
@@ -136,6 +138,7 @@ def main(argv: list[str] | None = None) -> int:
                 "text": to_text,
                 "json": to_json,
                 "csv": to_csv,
+                "html": to_html,
             }[args.format](result)
             if args.out:
                 Path(args.out).write_text(rendered, encoding="utf-8")
