@@ -12,6 +12,12 @@ from . import __version__
 from .batch import batch_csv
 from .config import ConfigError, load_convention, starter_convention
 from .links import audit_urls, build_url
+from .qr import (
+    QrDependencyError,
+    make_qr_jobs_from_csv,
+    make_qr_jobs_from_urls,
+    write_qr_codes,
+)
 from .report import to_csv, to_json, to_text
 
 
@@ -39,7 +45,9 @@ def _read_audit_urls(path: Path, url_column: str | None) -> list[str]:
                     "landing_url",
                     "destination_url",
                 )
-                column = next((name for name in candidates if name in reader.fieldnames), None)
+                column = next(
+                    (name for name in candidates if name in reader.fieldnames), None
+                )
             if column is None or column not in reader.fieldnames:
                 raise ValueError(
                     "could not identify URL column; pass --url-column explicitly"
@@ -79,9 +87,54 @@ def build_parser() -> argparse.ArgumentParser:
     audit_parser.add_argument("--config", required=True)
     audit_parser.add_argument("--input", required=True)
     audit_parser.add_argument("--url-column")
-    audit_parser.add_argument("--format", choices=("text", "json", "csv"), default="text")
+    audit_parser.add_argument(
+        "--format", choices=("text", "json", "csv"), default="text"
+    )
     audit_parser.add_argument("--out")
     audit_parser.add_argument("--strict", action="store_true")
+
+    qr_parser = subparsers.add_parser(
+        "qr",
+        help="export QR codes for campaign links (requires optional [qr] extra)",
+    )
+    qr_parser.add_argument(
+        "--url",
+        action="append",
+        default=[],
+        help="absolute http(s) URL to encode (repeatable)",
+    )
+    qr_parser.add_argument(
+        "--input",
+        help="CSV or text file of links (CSV preferred after clk batch)",
+    )
+    qr_parser.add_argument("--url-column", help="CSV column holding the URL")
+    qr_parser.add_argument(
+        "--name-column",
+        help="CSV column used for file names (default: handle/name/creator)",
+    )
+    qr_parser.add_argument(
+        "--out-dir",
+        default="qr-codes",
+        help="directory for generated QR files (default: qr-codes)",
+    )
+    qr_parser.add_argument(
+        "--format",
+        choices=("svg", "png"),
+        default="svg",
+        help="output format (default: svg)",
+    )
+    qr_parser.add_argument(
+        "--scale",
+        type=int,
+        default=8,
+        help="module scale factor 1-40 (default: 8)",
+    )
+    qr_parser.add_argument(
+        "--error",
+        choices=("l", "m", "q", "h"),
+        default="m",
+        help="QR error correction level (default: m)",
+    )
 
     return parser
 
@@ -99,6 +152,42 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(f"Wrote {path}")
             return 0
+
+        if args.command == "qr":
+            jobs = []
+            if args.url:
+                jobs.extend(make_qr_jobs_from_urls(args.url))
+            if args.input:
+                input_path = Path(args.input)
+                if input_path.suffix.lower() == ".csv":
+                    jobs.extend(
+                        make_qr_jobs_from_csv(
+                            input_path,
+                            url_column=args.url_column,
+                            name_column=args.name_column,
+                        )
+                    )
+                else:
+                    urls = [
+                        line.strip()
+                        for line in input_path.read_text(encoding="utf-8").splitlines()
+                    ]
+                    jobs.extend(make_qr_jobs_from_urls(urls))
+            if not jobs:
+                raise ValueError("provide at least one --url or --input with links")
+            summary = write_qr_codes(
+                jobs,
+                Path(args.out_dir),
+                fmt=args.format,
+                scale=args.scale,
+                error=args.error,
+            )
+            print(
+                f"Wrote {summary.written}/{summary.total} QR codes to {args.out_dir}; "
+                f"{summary.failed} failed",
+                file=sys.stderr,
+            )
+            return 1 if summary.failed else 0
 
         convention = load_convention(args.config)
 
@@ -144,6 +233,9 @@ def main(argv: list[str] | None = None) -> int:
             if result.errors or (args.strict and result.warnings):
                 return 1
             return 0
+    except QrDependencyError as exc:
+        print(f"clk: {exc}", file=sys.stderr)
+        return 2
     except (ConfigError, OSError, ValueError) as exc:
         print(f"clk: {exc}", file=sys.stderr)
         return 2

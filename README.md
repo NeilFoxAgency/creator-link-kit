@@ -10,7 +10,7 @@ reaches your analytics.
 * 30 creators × 3 placements each → 90 links nobody wants to build by hand
 
 `creator-link-kit` (CLI: `clk`) catches all of this offline, in seconds, with
-zero dependencies and no data leaving your machine.
+zero required dependencies and no data leaving your machine.
 
 ## What it does
 
@@ -20,6 +20,7 @@ zero dependencies and no data leaving your machine.
 | `clk build` | Build and validate a single campaign link |
 | `clk batch` | Generate one validated link per row of a creator roster CSV |
 | `clk audit` | Check shipped links (CSV or text export) against the convention |
+| `clk qr` | Export SVG/PNG QR codes for links (optional `[qr]` extra) |
 | `clk validate-config` | Sanity-check the convention file itself |
 
 Everything is driven by one small JSON (or YAML) convention file that lives in
@@ -48,6 +49,7 @@ Requires Python 3.10+. No required dependencies.
 ```bash
 pip install creator-link-kit          # once published to PyPI
 pip install creator-link-kit[yaml]    # optional: YAML convention files
+pip install creator-link-kit[qr]      # optional: QR code export (segno)
 ```
 
 Or run from a clone:
@@ -55,7 +57,7 @@ Or run from a clone:
 ```bash
 git clone https://github.com/NeilFoxAgency/creator-link-kit
 cd creator-link-kit
-pip install -e .
+pip install -e ".[qr]"   # or pip install -e . without QR support
 ```
 
 ## Quickstart
@@ -69,6 +71,9 @@ clk batch --config creator-links.json --roster roster.csv --out links.csv
 
 # 3. Later, audit what actually shipped (export from your tracker, link-in-bio, GA4…)
 clk audit --config creator-links.json --input live_links.csv
+
+# 4. Optional: QR codes for YouTube end screens or packaging inserts
+clk qr --input links.csv --out-dir qr-codes --format svg
 ```
 
 A roster row is just CSV:
@@ -109,6 +114,22 @@ Try it on the included demo data:
 clk batch --config examples/convention.json --roster examples/roster.csv
 clk audit --config examples/convention.json --input examples/live_links.csv
 ```
+
+## QR code export
+
+After `clk batch`, export scannable codes for creators who need physical or
+on-screen placements:
+
+```bash
+pip install 'creator-link-kit[qr]'
+clk qr --input links.csv --out-dir qr-codes --format svg
+clk qr --url 'https://shop.example.com/glowdrop?utm_source=youtube&utm_medium=influencer&utm_campaign=glowdrop-launch&utm_content=glowwithgreta' --out-dir qr-codes
+```
+
+- File names prefer the `handle` / `name` / `creator` column when present.
+- Default format is SVG (vector, print-friendly). PNG is available via `--format png`.
+- Error correction defaults to medium (`--error m`); raise to `h` for dense print.
+- Fully offline: no network calls, no telemetry, no link shortener APIs.
 
 ## The convention file
 
@@ -200,7 +221,6 @@ machine. See `SECURITY.md`.
 
 ## Roadmap
 
-* QR code export for YouTube end screens and packaging inserts
 * Optional HTML audit report for sharing with clients
 * `utm_id` (GA4 campaign ID) governance helpers
 * A GitHub Action wrapper for one-line CI audits
