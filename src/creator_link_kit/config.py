@@ -24,6 +24,9 @@ class ParameterRule:
 class BatchConfig:
     param_map: dict[str, str] = field(default_factory=dict)
     url_column: str | None = None
+    discount_code_template: str | None = None
+    discount_code_pattern: str | None = None
+    discount_code_column: str = "discount_code"
 
 
 @dataclass(frozen=True)
@@ -161,6 +164,26 @@ def convention_from_dict(raw: dict[str, Any]) -> Convention:
     if url_column is not None and not isinstance(url_column, str):
         raise ConfigError("batch.url_column must be a string")
 
+    discount_code_template = batch_raw.get("discount_code_template")
+    if discount_code_template is not None:
+        if not isinstance(discount_code_template, str) or not discount_code_template.strip():
+            raise ConfigError("batch.discount_code_template must be a non-empty string")
+        discount_code_template = discount_code_template.strip()
+
+    discount_code_pattern = batch_raw.get("discount_code_pattern")
+    if discount_code_pattern is not None:
+        if not isinstance(discount_code_pattern, str):
+            raise ConfigError("batch.discount_code_pattern must be a string")
+        try:
+            re.compile(discount_code_pattern)
+        except re.error as exc:
+            raise ConfigError(f"batch.discount_code_pattern is invalid: {exc}") from exc
+
+    discount_code_column = batch_raw.get("discount_code_column", "discount_code")
+    if not isinstance(discount_code_column, str) or not discount_code_column.strip():
+        raise ConfigError("batch.discount_code_column must be a non-empty string")
+    discount_code_column = discount_code_column.strip()
+
     convention = Convention(
         version=version,
         base_url=base_url,
@@ -170,7 +193,13 @@ def convention_from_dict(raw: dict[str, Any]) -> Convention:
         required=required,
         parameters=parameters,
         defaults=defaults,
-        batch=BatchConfig(param_map=param_map, url_column=url_column),
+        batch=BatchConfig(
+            param_map=param_map,
+            url_column=url_column,
+            discount_code_template=discount_code_template,
+            discount_code_pattern=discount_code_pattern,
+            discount_code_column=discount_code_column,
+        ),
     )
 
     # Validate defaults against the same rules used for real links.
@@ -213,5 +242,8 @@ def starter_convention() -> dict[str, Any]:
                 "utm_content": "{handle}",
             },
             "url_column": "landing_url",
+            "discount_code_template": "{handle}15",
+            "discount_code_pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{1,31}$",
+            "discount_code_column": "discount_code",
         },
     }
