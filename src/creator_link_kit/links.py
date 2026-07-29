@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from difflib import get_close_matches
 import re
@@ -236,9 +236,89 @@ def _canonical_link(url: str) -> tuple[str, tuple[tuple[str, str], ...]] | None:
     return destination, utm_pairs
 
 
+def _utm_params(url: str) -> dict[str, str] | None:
+    try:
+        parsed = urlsplit(url)
+    except ValueError:
+        return None
+    if not parsed.netloc:
+        return None
+    pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    return {key: value for key, value in pairs if key.startswith("utm_")}
+
+
+def _campaign_id_consistency_issues(
+    observations: list[tuple[int, str, str, str]],
+) -> list[Issue]:
+    """Flag GA4 campaign-name / campaign-id mismatches across an audit set.
+
+    observations: (row, url, campaign, utm_id) for rows that carry both values.
+    """
+    if not observations:
+        return []
+
+    campaign_to_ids: dict[str, set[str]] = defaultdict(set)
+    id_to_campaigns: dict[str, set[str]] = defaultdict(set)
+    campaign_to_rows: dict[str, list[tuple[int, str, str]]] = defaultdict(list)
+    id_to_rows: dict[str, list[tuple[int, str, str]]] = defaultdict(list)
+
+    for row, url, campaign, utm_id in observations:
+        campaign_to_ids[campaign].add(utm_id)
+        id_to_campaigns[utm_id].add(campaign)
+        campaign_to_rows[campaign].append((row, url, utm_id))
+        id_to_rows[utm_id].append((row, url, campaign))
+
+    issues: list[Issue] = []
+
+    for campaign, ids in sorted(campaign_to_ids.items()):
+        if len(ids) < 2:
+            continue
+        id_list = ", ".join(sorted(repr(value) for value in ids))
+        for row, url, utm_id in campaign_to_rows[campaign]:
+            issues.append(
+                Issue(
+                    "CLK110",
+                    "error",
+                    (
+                        f"utm_campaign {campaign!r} is paired with multiple "
+                        f"utm_id values across this audit set ({id_list}); "
+                        "GA4 campaign ID reporting will split"
+                    ),
+                    parameter="utm_id",
+                    row=row,
+                    url=url,
+                )
+            )
+
+    for utm_id, campaigns in sorted(id_to_campaigns.items()):
+        if len(campaigns) < 2:
+            continue
+        # Already reported via CLK110 when the reverse map is also inconsistent;
+        # still report ID→campaign fan-out which is a distinct mistake.
+        campaign_list = ", ".join(sorted(repr(value) for value in campaigns))
+        for row, url, campaign in id_to_rows[utm_id]:
+            issues.append(
+                Issue(
+                    "CLK111",
+                    "error",
+                    (
+                        f"utm_id {utm_id!r} is paired with multiple "
+                        f"utm_campaign values across this audit set ({campaign_list}); "
+                        "the same GA4 campaign ID must not label different campaigns"
+                    ),
+                    parameter="utm_id",
+                    row=row,
+                    url=url,
+                )
+            )
+
+    return issues
+
+
 def audit_urls(urls: Iterable[str], convention: Convention) -> AuditResult:
     issues: list[Issue] = []
     seen: dict[tuple[str, tuple[tuple[str, str], ...]], int] = {}
+    campaign_id_pairs: list[tuple[int, str, str, str]] = []
     checked = 0
     for row, raw_url in enumerate(urls, start=1):
         url = raw_url.strip()
@@ -261,4 +341,13 @@ def audit_urls(urls: Iterable[str], convention: Convention) -> AuditResult:
                 )
             else:
                 seen[canonical] = row
+
+        params = _utm_params(url)
+        if params is not None:
+            campaign = params.get("utm_campaign")
+            utm_id = params.get("utm_id")
+            if campaign and utm_id:
+                campaign_id_pairs.append((row, url, campaign, utm_id))
+
+    issues.extend(_campaign_id_consistency_issues(campaign_id_pairs))
     return AuditResult(checked=checked, issues=tuple(issues))
