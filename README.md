@@ -8,6 +8,7 @@ reaches your analytics.
 * `youtube` vs `YouTube` vs `yt` in the same campaign → three separate rows in GA4
 * one teammate's copy-pasted link with the wrong creator handle → silent mis-attribution
 * 30 creators × 3 placements each → 90 links nobody wants to build by hand
+* the same `utm_campaign` name paired with two different `utm_id` values → GA4 campaign ID reporting splits
 
 `creator-link-kit` (CLI: `clk`) catches all of this offline, in seconds, with
 zero dependencies and no data leaving your machine.
@@ -81,27 +82,7 @@ labcoatlucie,Lucie Novak,youtube,https://shop.example.com/glowdrop?bundle=pro
 ```
 
 `clk batch` turns it into per-creator links that all follow the same
-convention - existing query params like `?bundle=pro` are preserved:
-
-```csv
-handle,name,platform,landing_url,generated_url,status,issues
-glowwithgreta,Greta Mohr,youtube,,https://shop.example.com/glowdrop?utm_source=youtube&utm_medium=influencer&utm_campaign=glowdrop-launch&utm_content=glowwithgreta,ok,
-```
-
-And `clk audit` finds the real-world mess:
-
-```text
-  row 2: https://shop.example.com/glowdrop?utm_source=YouTube&utm_medium=...
-    ERROR  CLK105 ERROR: [utm_source] 'YouTube' only differs from an allowed value
-           by case; analytics tools treat these as different values (did you mean 'youtube'?)
-  row 4: https://shop.example.com/glowdrop?utm_source=tiktok&utm_campaign=...
-    ERROR  CLK102 ERROR: [utm_medium] required parameter is missing
-  Duplicate links:
-    ERROR  CLK005 ERROR: row 5 duplicates row 1: same destination and UTM values,
-           so reporting splits between rows
-
-  8 links checked: 3 clean, 3 error(s), 3 warning(s)
-```
+convention - existing query params like `?bundle=pro` are preserved.
 
 Try it on the included demo data:
 
@@ -118,13 +99,14 @@ clk audit --config examples/convention.json --input examples/live_links.csv
   "base_url": "https://shop.example.com/glowdrop",
   "owned_domains": ["example.com"],
   "casing": "lowercase",
-  "max_value_length": 80,
+  "max_value_length": 100,
   "required": ["utm_source", "utm_medium", "utm_campaign"],
   "parameters": {
     "utm_source":   { "allowed": ["youtube", "instagram", "tiktok", "newsletter"] },
     "utm_medium":   { "allowed": ["influencer", "social", "email", "cpc"] },
     "utm_campaign": { "pattern": "^[a-z0-9][a-z0-9-]{2,48}$" },
-    "utm_content":  { "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" }
+    "utm_content":  { "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "utm_id":       { "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,99}$" }
   },
   "defaults": { "utm_medium": "influencer" },
   "batch": {
@@ -132,7 +114,8 @@ clk audit --config examples/convention.json --input examples/live_links.csv
       "utm_source": "{platform}",
       "utm_medium": "influencer",
       "utm_campaign": "glowdrop-launch",
-      "utm_content": "{handle}"
+      "utm_content": "{handle}",
+      "utm_id": "cmp_glowdrop_launch"
     },
     "url_column": "landing_url"
   }
@@ -142,16 +125,26 @@ clk audit --config examples/convention.json --input examples/live_links.csv
 | Key | Meaning |
 | --- | --- |
 | `base_url` | Default destination when a roster row has no URL of its own |
-| `owned_domains` | Your properties. Audit warns when a tagged link points anywhere else (typo, expired redirect, wrong property) |
+| `owned_domains` | Your properties. Audit warns when a tagged link points anywhere else |
 | `casing` | `lowercase` (recommended) or `any` |
 | `max_value_length` | Per-value character limit |
 | `required` | Parameters every link must carry |
 | `parameters` | Per-parameter rules: `allowed` (exact list) and/or `pattern` (regex) |
-| `defaults` | Values pre-filled by `build`/`batch` (e.g. medium is always `influencer`) |
+| `defaults` | Values pre-filled by `build`/`batch` |
 | `batch.param_map` | Templates per parameter; `{column}` pulls from the roster CSV |
 | `batch.url_column` | Roster column holding a per-row landing URL (optional) |
 
 YAML works too: name the file `*.yaml` and install the `[yaml]` extra.
+
+### GA4 `utm_id` (campaign ID)
+
+`utm_id` is optional unless you add it to `required`. When present:
+
+* Values are validated against the `utm_id` rule in your convention (the starter uses a permissive alphanumeric pattern suitable for GA4 campaign IDs).
+* `clk batch` can stamp a stable ID for an entire campaign by setting a constant in `batch.param_map` (as in the starter: `"utm_id": "cmp_product_launch"`).
+* `clk audit` checks **cross-link consistency**: the same `utm_campaign` must not appear with two different `utm_id` values, and the same `utm_id` must not label two different campaigns (`CLK110` / `CLK111`). Rows without both parameters are ignored for this check.
+
+This mirrors how GA4 uses campaign ID as a stable join key independent of the human-readable campaign name.
 
 ## Rule codes
 
@@ -174,6 +167,8 @@ an audit unless `--strict` is passed.
 | CLK107 | warning | uppercase value under a lowercase convention |
 | CLK108 | error | value over the length limit |
 | CLK109 | error | empty value |
+| CLK110 | error | same `utm_campaign` paired with multiple `utm_id` values in the audit set |
+| CLK111 | error | same `utm_id` paired with multiple `utm_campaign` values in the audit set |
 
 ## Exit codes (CI-friendly)
 
@@ -202,7 +197,6 @@ machine. See `SECURITY.md`.
 
 * QR code export for YouTube end screens and packaging inserts
 * Optional HTML audit report for sharing with clients
-* `utm_id` (GA4 campaign ID) governance helpers
 * A GitHub Action wrapper for one-line CI audits
 
 Ideas and use cases welcome - see `CONTRIBUTING.md`.
