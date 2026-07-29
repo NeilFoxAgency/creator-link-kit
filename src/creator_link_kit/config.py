@@ -194,7 +194,7 @@ def starter_convention() -> dict[str, Any]:
         "base_url": "https://shop.example.com/product",
         "owned_domains": ["example.com"],
         "casing": "lowercase",
-        "max_value_length": 80,
+        "max_value_length": 100,
         "required": ["utm_source", "utm_medium", "utm_campaign"],
         "parameters": {
             "utm_source": {
@@ -203,6 +203,7 @@ def starter_convention() -> dict[str, Any]:
             "utm_medium": {"allowed": ["influencer", "social", "email", "cpc"]},
             "utm_campaign": {"pattern": "^[a-z0-9][a-z0-9-]{2,48}$"},
             "utm_content": {"pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"},
+            "utm_id": {"pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,99}$"},
         },
         "defaults": {"utm_medium": "influencer"},
         "batch": {
@@ -211,6 +212,7 @@ def starter_convention() -> dict[str, Any]:
                 "utm_medium": "influencer",
                 "utm_campaign": "product-launch",
                 "utm_content": "{handle}",
+                "utm_id": "cmp_product_launch",
             },
             "url_column": "landing_url",
         },
