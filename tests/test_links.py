@@ -96,6 +96,62 @@ class LinkTests(unittest.TestCase):
         issues = validate_url("https://shop.example.com/product", self.convention)
         self.assertIn("CLK004", {issue.code for issue in issues})
 
+    def test_utm_id_pattern_accepts_valid(self):
+        issues = validate_url(
+            "https://shop.example.com/product?utm_source=youtube&utm_medium=influencer&utm_campaign=spring-launch&utm_id=cmp_2026_q3_glow",
+            self.convention,
+        )
+        self.assertNotIn("CLK106", {issue.code for issue in issues})
+        self.assertNotIn("CLK101", {issue.code for issue in issues})
+
+    def test_utm_id_pattern_rejects_spaces(self):
+        issues = validate_url(
+            "https://shop.example.com/product?utm_source=youtube&utm_medium=influencer&utm_campaign=spring-launch&utm_id=bad id",
+            self.convention,
+        )
+        self.assertIn("CLK106", {issue.code for issue in issues})
+
+    def test_campaign_id_mismatch_across_rows(self):
+        urls = [
+            "https://shop.example.com/product?utm_source=youtube&utm_medium=influencer&utm_campaign=glowdrop&utm_id=id-a",
+            "https://shop.example.com/product?utm_source=instagram&utm_medium=influencer&utm_campaign=glowdrop&utm_id=id-b",
+        ]
+        result = audit_urls(urls, self.convention)
+        clk110 = [i for i in result.issues if i.code == "CLK110"]
+        self.assertEqual(len(clk110), 2)
+        self.assertTrue(all(i.severity == "error" for i in clk110))
+
+    def test_same_id_multiple_campaigns(self):
+        urls = [
+            "https://shop.example.com/product?utm_source=youtube&utm_medium=influencer&utm_campaign=alpha&utm_id=shared-id",
+            "https://shop.example.com/product?utm_source=youtube&utm_medium=influencer&utm_campaign=beta&utm_id=shared-id",
+        ]
+        result = audit_urls(urls, self.convention)
+        self.assertIn("CLK111", {issue.code for issue in result.issues})
+
+    def test_consistent_campaign_id_pairs_clean(self):
+        urls = [
+            "https://shop.example.com/product?utm_source=youtube&utm_medium=influencer&utm_campaign=glowdrop&utm_id=id-a",
+            "https://shop.example.com/product?utm_source=instagram&utm_medium=influencer&utm_campaign=glowdrop&utm_id=id-a",
+            "https://shop.example.com/product?utm_source=youtube&utm_medium=influencer&utm_campaign=other&utm_id=id-b",
+        ]
+        result = audit_urls(urls, self.convention)
+        codes = {issue.code for issue in result.issues}
+        self.assertNotIn("CLK110", codes)
+        self.assertNotIn("CLK111", codes)
+
+    def test_build_with_utm_id(self):
+        url = build_url(
+            "https://shop.example.com/product",
+            {
+                "utm_source": "youtube",
+                "utm_campaign": "spring-launch",
+                "utm_id": "cmp_spring_2026",
+            },
+            self.convention,
+        )
+        self.assertIn("utm_id=cmp_spring_2026", url)
+
 
 if __name__ == "__main__":
     unittest.main()
