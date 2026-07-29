@@ -19,6 +19,9 @@
       "utm_campaign": "glowdrop-launch",
       "utm_content": "{handle}"
     },
-    "url_column": "landing_url"
+    "url_column": "landing_url",
+    "discount_code_template": "{handle}15",
+    "discount_code_pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{1,31}$",
+    "discount_code_column": "discount_code"
   }
 }
