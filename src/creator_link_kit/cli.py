@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from . import __version__
 from .batch import batch_csv
@@ -39,7 +39,9 @@ def _read_audit_urls(path: Path, url_column: str | None) -> list[str]:
                     "landing_url",
                     "destination_url",
                 )
-                column = next((name for name in candidates if name in reader.fieldnames), None)
+                column = next(
+                    (name for name in candidates if name in reader.fieldnames), None
+                )
             if column is None or column not in reader.fieldnames:
                 raise ValueError(
                     "could not identify URL column; pass --url-column explicitly"
