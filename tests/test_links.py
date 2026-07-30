@@ -106,7 +106,10 @@ class LinkTests(unittest.TestCase):
 
     def test_utm_id_pattern_rejects_spaces(self):
         issues = validate_url(
-            "https://shop.example.com/product?utm_source=youtube&utm_medium=influencer&utm_campaign=spring-launch&utm_id=bad id",
+            (
+                "https://shop.example.com/product?utm_source=youtube&utm_medium="
+                "influencer&utm_campaign=spring-launch&utm_id=bad id"
+            ),
             self.convention,
         )
         self.assertIn("CLK106", {issue.code for issue in issues})
