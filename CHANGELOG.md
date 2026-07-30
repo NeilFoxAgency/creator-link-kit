@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Reject links with invalid ports or embedded URL credentials during build and audit.
+- Added optional HTML audit report (`clk audit --format html`) for offline client sharing with escaped dynamic content.
 
 ## 0.1.0 - 2026-07-16
 

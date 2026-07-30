@@ -69,6 +69,9 @@ clk batch --config creator-links.json --roster roster.csv --out links.csv
 
 # 3. Later, audit what actually shipped (export from your tracker, link-in-bio, GA4…)
 clk audit --config creator-links.json --input live_links.csv
+
+# Optional: share a readable offline HTML report with a client
+clk audit --config creator-links.json --input live_links.csv --format html --out audit-report.html
 ```
 
 A roster row is just CSV:
@@ -108,7 +111,10 @@ Try it on the included demo data:
 ```bash
 clk batch --config examples/convention.json --roster examples/roster.csv
 clk audit --config examples/convention.json --input examples/live_links.csv
+clk audit --config examples/convention.json --input examples/live_links.csv --format html --out /tmp/audit.html
 ```
+
+Audit output formats: `text` (default), `json`, `csv`, and `html` (self-contained page for client sharing; all dynamic values are HTML-escaped).
 
 ## The convention file
 
@@ -192,40 +198,6 @@ Example: block merging a campaign tracker update that breaks the convention.
     clk audit --config creator-links.json --input data/live_links.csv --strict
 ```
 
-## GitHub Action (one-line CI audits)
-
-A reusable composite action is included so other repositories can enforce the
-same convention without hand-writing install and CLI steps.
-
-```yaml
-- uses: actions/checkout@v4
-
-- name: Audit shipped creator links
-  uses: NeilFoxAgency/creator-link-kit@main
-  with:
-    config: creator-links.json
-    input: data/live_links.csv
-    format: text          # text | json | csv | html
-    strict: "true"        # optional; treat warnings as errors
-    # url-column: generated_url   # optional when auto-detect fails
-```
-
-Inputs:
-
-| Input | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `config` | yes | — | Path to the convention file |
-| `input` | yes | — | CSV or text file of links to audit |
-| `url-column` | no | auto | CSV column that holds the URL |
-| `format` | no | `text` | Report format (`text`, `json`, `csv`, `html`) |
-| `strict` | no | `false` | Treat warnings as errors |
-| `python-version` | no | `3.12` | Python runtime for the action |
-| `version` | no | local/action tree or latest | Pin a PyPI version, or `local` to install the action's own tree |
-
-The action installs `clk`, runs `clk audit` with the same exit codes as the CLI,
-and fails the job when the convention is broken. An example dispatch workflow
-lives at `.github/workflows/example-audit.yml`.
-
 ## Privacy
 
 The tool is fully offline: no network calls, no analytics, no telemetry, no
@@ -235,9 +207,8 @@ machine. See `SECURITY.md`.
 ## Roadmap
 
 * QR code export for YouTube end screens and packaging inserts
-* Optional HTML audit report for sharing with clients
 * `utm_id` (GA4 campaign ID) governance helpers
-* ~~A GitHub Action wrapper for one-line CI audits~~ (shipped)
+* A GitHub Action wrapper for one-line CI audits
 
 Ideas and use cases welcome - see `CONTRIBUTING.md`.
 
