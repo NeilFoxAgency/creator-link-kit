@@ -11,6 +11,7 @@ from pathlib import Path
 from . import __version__
 from .batch import batch_csv
 from .config import ConfigError, load_convention, starter_convention
+from .csvsafe import safe_row
 from .links import audit_urls, build_url
 from .qr import (
     QrDependencyError,
@@ -210,7 +211,7 @@ def main(argv: list[str] | None = None) -> int:
                             fieldnames.append(key)
                 writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
                 writer.writeheader()
-                writer.writerows(rows)
+                writer.writerows(safe_row(row) for row in rows)
             print(
                 f"Generated {summary.ok}/{summary.total} links; "
                 f"{summary.failed} failed",
