@@ -18,7 +18,7 @@ inputs:
     required: false
     default: ""
   format:
-    description: "Report format: text, json, or csv"
+    description: "Report format: text, json, csv, or html"
     required: false
     default: "text"
   strict:
@@ -44,18 +44,21 @@ runs:
 
     - name: Install creator-link-kit
       shell: bash
+      env:
+        CLK_ACTION_PATH: ${{ github.action_path }}
+        CLK_VERSION: ${{ inputs.version }}
       run: |
         set -euo pipefail
         python -m pip install --upgrade pip
-        if [ "${{ inputs.version }}" = "local" ]; then
-          python -m pip install -e "${{ github.action_path }}"
-        elif [ -n "${{ inputs.version }}" ]; then
-          python -m pip install "creator-link-kit==${{ inputs.version }}"
+        if [ "$CLK_VERSION" = "local" ]; then
+          python -m pip install -e "$CLK_ACTION_PATH"
+        elif [ -n "$CLK_VERSION" ]; then
+          python -m pip install "creator-link-kit==$CLK_VERSION"
         else
           # Prefer the action's own tree when the action is checked out from
           # this repository; otherwise install the published package.
-          if [ -f "${{ github.action_path }}/pyproject.toml" ]; then
-            python -m pip install -e "${{ github.action_path }}"
+          if [ -f "$CLK_ACTION_PATH/pyproject.toml" ]; then
+            python -m pip install -e "$CLK_ACTION_PATH"
           else
             python -m pip install creator-link-kit
           fi
@@ -63,13 +66,19 @@ runs:
 
     - name: Run clk audit
       shell: bash
+      env:
+        CLK_CONFIG: ${{ inputs.config }}
+        CLK_INPUT: ${{ inputs.input }}
+        CLK_URL_COLUMN: ${{ inputs.url-column }}
+        CLK_FORMAT: ${{ inputs.format }}
+        CLK_STRICT: ${{ inputs.strict }}
       run: |
         set -euo pipefail
-        ARGS=(audit --config "${{ inputs.config }}" --input "${{ inputs.input }}" --format "${{ inputs.format }}")
-        if [ -n "${{ inputs.url-column }}" ]; then
-          ARGS+=(--url-column "${{ inputs.url-column }}")
+        ARGS=(audit --config "$CLK_CONFIG" --input "$CLK_INPUT" --format "$CLK_FORMAT")
+        if [ -n "$CLK_URL_COLUMN" ]; then
+          ARGS+=(--url-column "$CLK_URL_COLUMN")
         fi
-        if [ "${{ inputs.strict }}" = "true" ]; then
+        if [ "$CLK_STRICT" = "true" ]; then
           ARGS+=(--strict)
         fi
         clk "${ARGS[@]}"
