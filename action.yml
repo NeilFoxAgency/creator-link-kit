@@ -1,0 +1,84 @@
+name: "Creator Link Kit Audit"
+description: "Audit creator campaign links against a convention-as-code file using clk"
+author: "Neil Fox Agency"
+
+branding:
+  icon: "link"
+  color: "blue"
+
+inputs:
+  config:
+    description: "Path to the convention JSON/YAML file"
+    required: true
+  input:
+    description: "Path to the CSV or text file of links to audit"
+    required: true
+  url-column:
+    description: "CSV column that holds the URL (optional; auto-detected when possible)"
+    required: false
+    default: ""
+  format:
+    description: "Report format: text, json, csv, or html"
+    required: false
+    default: "text"
+  strict:
+    description: "Treat warnings as errors (true/false)"
+    required: false
+    default: "false"
+  python-version:
+    description: "Python version used to run clk"
+    required: false
+    default: "3.12"
+  version:
+    description: "creator-link-kit version to install (empty = latest from PyPI, or 'local' to install from this repository)"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install creator-link-kit
+      shell: bash
+      env:
+        CLK_ACTION_PATH: ${{ github.action_path }}
+        CLK_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        python -m pip install --upgrade pip
+        if [ "$CLK_VERSION" = "local" ]; then
+          python -m pip install -e "$CLK_ACTION_PATH"
+        elif [ -n "$CLK_VERSION" ]; then
+          python -m pip install "creator-link-kit==$CLK_VERSION"
+        else
+          # Prefer the action's own tree when the action is checked out from
+          # this repository; otherwise install the published package.
+          if [ -f "$CLK_ACTION_PATH/pyproject.toml" ]; then
+            python -m pip install -e "$CLK_ACTION_PATH"
+          else
+            python -m pip install creator-link-kit
+          fi
+        fi
+
+    - name: Run clk audit
+      shell: bash
+      env:
+        CLK_CONFIG: ${{ inputs.config }}
+        CLK_INPUT: ${{ inputs.input }}
+        CLK_URL_COLUMN: ${{ inputs.url-column }}
+        CLK_FORMAT: ${{ inputs.format }}
+        CLK_STRICT: ${{ inputs.strict }}
+      run: |
+        set -euo pipefail
+        ARGS=(audit --config "$CLK_CONFIG" --input "$CLK_INPUT" --format "$CLK_FORMAT")
+        if [ -n "$CLK_URL_COLUMN" ]; then
+          ARGS+=(--url-column "$CLK_URL_COLUMN")
+        fi
+        if [ "$CLK_STRICT" = "true" ]; then
+          ARGS+=(--strict)
+        fi
+        clk "${ARGS[@]}"
