@@ -118,9 +118,7 @@ def to_html(result: AuditResult) -> str:
             parts.append('<section class="row-block">')
             parts.append(f"<h2>{html.escape(row_label)}</h2>")
             if sample_url:
-                parts.append(
-                    f'<p class="row-url">{html.escape(sample_url)}</p>'
-                )
+                parts.append(f'<p class="row-url">{html.escape(sample_url)}</p>')
             parts.append("<ul>")
             for issue in issues:
                 severity_class = html.escape(issue.severity)
