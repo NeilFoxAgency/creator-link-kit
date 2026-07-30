@@ -39,47 +39,53 @@ class JobBuilderTests(unittest.TestCase):
         self.assertEqual(jobs[0].stem, "qr-001")
         self.assertEqual(jobs[1].url, "https://example.com/b")
 
-    def test_csv_with_handle(self):
+    def test_csv_prefers_placement_id(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "links.csv"
             with path.open("w", newline="", encoding="utf-8") as handle:
-                writer = csv.DictWriter(handle, fieldnames=["handle", "generated_url"])
+                writer = csv.DictWriter(
+                    handle,
+                    fieldnames=["placement_id", "handle", "generated_url"],
+                )
                 writer.writeheader()
                 writer.writerow(
                     {
+                        "placement_id": "plc-greta-video-01",
                         "handle": "glowwithgreta",
-                        "generated_url": "https://shop.example.com/?utm_source=youtube",
+                        "generated_url": "https://shop.example.com/product",
                     }
                 )
                 writer.writerow(
-                    {"handle": "", "generated_url": "https://shop.example.com/other"}
+                    {
+                        "placement_id": "plc-greta-video-02",
+                        "handle": "glowwithgreta",
+                        "generated_url": "https://shop.example.com/other",
+                    }
                 )
             jobs = make_qr_jobs_from_csv(path)
             self.assertEqual(len(jobs), 2)
-            self.assertEqual(jobs[0].stem, "glowwithgreta")
-            self.assertEqual(jobs[1].stem, "qr-002")
+            self.assertEqual(jobs[0].stem, "plc-greta-video-01")
+            self.assertEqual(jobs[1].stem, "plc-greta-video-02")
 
 
 class WriteQrTests(unittest.TestCase):
     def test_missing_dependency(self):
-        with mock.patch.dict("sys.modules", {"segno": None}):
-            # Force ImportError path by simulating missing module
-            import creator_link_kit.qr as qr_mod
+        import creator_link_kit.qr as qr_mod
 
-            original = qr_mod._require_segno
+        original = qr_mod._require_segno
 
-            def boom():
-                raise QrDependencyError("missing")
+        def boom():
+            raise QrDependencyError("missing")
 
-            qr_mod._require_segno = boom  # type: ignore[assignment]
-            try:
-                with self.assertRaises(QrDependencyError):
-                    write_qr_codes(
-                        [QrJob("https://example.com", "x")],
-                        Path("/tmp"),
-                    )
-            finally:
-                qr_mod._require_segno = original  # type: ignore[assignment]
+        qr_mod._require_segno = boom  # type: ignore[assignment]
+        try:
+            with self.assertRaises(QrDependencyError):
+                write_qr_codes(
+                    [QrJob("https://example.com", "x")],
+                    Path("/tmp"),
+                )
+        finally:
+            qr_mod._require_segno = original  # type: ignore[assignment]
 
     def test_write_with_fake_segno(self):
         class FakeQr:
@@ -99,8 +105,8 @@ class WriteQrTests(unittest.TestCase):
                 summary = write_qr_codes(
                     [
                         QrJob("https://example.com/a", "alpha"),
-                        QrJob("https://example.com/b", "ALPHA"),  # case collision
-                        QrJob("https://example.com/c", "alpha-2"),  # suffix collision
+                        QrJob("https://example.com/b", "ALPHA"),
+                        QrJob("https://example.com/c", "alpha-2"),
                         QrJob("https://example.com/d", "../unsafe"),
                         QrJob("not-a-url", "bad"),
                     ],

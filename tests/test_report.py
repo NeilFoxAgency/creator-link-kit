@@ -28,6 +28,7 @@ class ReportTests(unittest.TestCase):
         payload = json.loads(to_json(self.result))
         self.assertEqual(payload["checked"], 1)
         self.assertGreater(payload["warnings"], 0)
+        self.assertGreater(payload["errors"], 0)
 
     def test_csv(self):
         rows = list(csv.DictReader(io.StringIO(to_csv(self.result))))
@@ -49,7 +50,8 @@ class ReportTests(unittest.TestCase):
         convention = convention_from_dict(starter_convention())
         hostile = (
             "https://shop.example.com/x?utm_source=<script>alert(1)</script>"
-            "&utm_medium=influencer&utm_campaign=test"
+            "&utm_medium=influencer&utm_campaign=cmp-test"
+            "&utm_id=cmp-test&utm_content=plc-test-01"
         )
         result = audit_urls([hostile], convention)
         report = to_html(result)

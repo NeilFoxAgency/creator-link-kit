@@ -98,7 +98,13 @@ def make_qr_jobs_from_csv(
             )
         label_column = name_column
         if label_column is None:
-            for candidate in ("handle", "name", "creator", "utm_content"):
+            for candidate in (
+                "placement_id",
+                "handle",
+                "name",
+                "creator",
+                "utm_content",
+            ):
                 if candidate in reader.fieldnames:
                     label_column = candidate
                     break

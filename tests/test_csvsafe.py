@@ -33,7 +33,10 @@ class CsvSafetyTests(unittest.TestCase):
             source = Path(tmp) / "roster.csv"
             destination = Path(tmp) / "links.csv"
             source.write_text(
-                'handle,name,platform,landing_url\ngreta,"=1+1",youtube,\n',
+                "brand_id,campaign_id,creator_id,placement_id,handle,name,"
+                "platform,landing_url\n"
+                'brd-soap,cmp-spring,crt-greta,plc-greta-01,greta,"=1+1",'
+                "youtube,\n",
                 encoding="utf-8",
             )
 

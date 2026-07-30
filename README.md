@@ -1,59 +1,74 @@
 # creator-link-kit
 
 Convention-as-code tooling for creator and influencer campaign links.
-Define your UTM naming convention once, generate validated per-creator links
-in bulk, then audit the links that actually shipped - before messy data ever
-reaches your analytics.
 
-* `youtube` vs `YouTube` vs `yt` in the same campaign → three separate rows in GA4
-* one teammate's copy-pasted link with the wrong creator handle → silent mis-attribution
-* 30 creators × 3 placements each → 90 links nobody wants to build by hand
-* shared or mistyped discount codes → attribution that cannot be joined back to a creator
+Define a UTM naming convention once, generate validated links for each creator
+placement, emit a machine-readable provenance record, and audit the links that
+actually shipped before attribution data reaches analytics.
 
-`creator-link-kit` (CLI: `clk`) catches all of this offline, in seconds, with
-zero dependencies and no data leaving your machine.
+`creator-link-kit` is deliberately a deterministic, offline library and CLI. It
+does not shorten links, collect clicks, connect to commerce platforms, or store
+conversion data. A private attribution service can consume its provider-neutral
+models and link specifications, then call a managed link provider without
+putting credentials or client data in this public package.
 
-The same `utm_campaign` paired with two different `utm_id` values splits GA4
-campaign ID reporting; audits enforce one-to-one campaign/ID consistency.
+## What v0.2 adds
 
-## What it does
+- governed `utm_id` campaign identifiers and cross-link consistency checks
+- stable `placement_id` values as the recommended `utm_content`
+- standard `brand_id`, `campaign_id`, `creator_id`, and `placement_id` roster
+  columns
+- batch-level duplicate `placement_id` rejection
+- production mode, where an unapproved destination domain is a hard error
+- JSON link specifications with destinations, IDs, config version, and audit
+  results
+- provider-neutral request, response, and adapter protocol models
+- optional placement-specific discount-code generation with pattern and
+  case-insensitive uniqueness checks
+- optional offline SVG/PNG QR export, named by `placement_id` when available
+- malformed-port and embedded-credential URL rejection
+- spreadsheet-safe CSV exports for untrusted roster and audit values
+- escaped, self-contained HTML audit reports
+- a reusable GitHub Action for one-line CI audits
+- explicit public-package data boundaries for secrets and client information
+
+## Why placement IDs matter
+
+A creator can publish more than one sponsored video. The creator handle alone
+therefore cannot identify a specific placement.
+
+Use one immutable `placement_id` for every sponsored asset:
+
+```text
+brand_id       = brd-glowdrop
+campaign_id    = cmp-glowdrop-launch
+creator_id     = crt-glowwithgreta
+placement_id   = plc-glowdrop-greta-video-01
+```
+
+Three videos from one creator should have one `creator_id` and three different
+`placement_id` values. The starter convention maps `campaign_id` to `utm_id`
+and `placement_id` to `utm_content`.
+
+## Commands
 
 | Command | Purpose |
 | --- | --- |
-| `clk init` | Write a starter convention file you can edit in two minutes |
-| `clk build` | Build and validate a single campaign link |
-| `clk batch` | Generate one validated link (and optional unique discount code) per roster row |
-| `clk audit` | Check shipped links (CSV or text export) against the convention |
-| `clk qr` | Export SVG/PNG QR codes for links (optional `[qr]` extra) |
-| `clk validate-config` | Sanity-check the convention file itself |
-
-Everything is driven by one small JSON (or YAML) convention file that lives in
-your repo, so "how we tag links" stops being a wiki page nobody reads and
-becomes something CI can enforce.
-
-## Why not...
-
-* **Google's Campaign URL Builder** - great for one link, but it can't store a
-  convention, can't validate values against your allowlists, and can't do 90
-  links at once.
-* **A shared spreadsheet** - works until someone freestyles a value, duplicates
-  a row, or copies the wrong creator's link. (See `RESEARCH.md` - this is the
-  default pain of every team we found discussing UTM governance.)
-* **Paid governance SaaS** (UTM.io, Improvado, …) - solves this and much more,
-  for a subscription. This tool covers the 80% that agencies and small teams
-  actually need, free and offline.
-* **`utm-governance-linter`** (the closest OSS project) - audit-only.
-  `creator-link-kit` also *generates* links (single and roster-scale batch)
-  with per-creator templating, near-miss suggestions, and richer checks.
+| `clk init` | Write a production-oriented starter convention |
+| `clk build` | Build one validated link or JSON link specification |
+| `clk batch` | Generate one governed link and specification per roster row |
+| `clk audit` | Check shipped links against the convention |
+| `clk qr` | Export SVG or PNG QR codes using the optional `[qr]` extra |
+| `clk validate-config` | Validate the convention file itself |
 
 ## Install
 
-Requires Python 3.10+. No required dependencies.
+Requires Python 3.10 or newer. The core package has no runtime dependencies.
 
 ```bash
-pip install creator-link-kit          # once published to PyPI
-pip install creator-link-kit[yaml]    # optional: YAML convention files
-pip install creator-link-kit[qr]      # optional: QR code export (segno)
+pip install creator-link-kit
+pip install creator-link-kit[yaml]  # optional YAML convention files
+pip install creator-link-kit[qr]    # optional offline QR export
 ```
 
 Or run from a clone:
@@ -62,234 +77,436 @@ Or run from a clone:
 git clone https://github.com/NeilFoxAgency/creator-link-kit
 cd creator-link-kit
 pip install -e .
-pip install -e ".[qr]"   # optional QR support
 ```
 
 ## Quickstart
 
+Create and edit a convention:
+
 ```bash
-# 1. Write a starter convention and edit sources, mediums, campaign pattern, base_url
 clk init creator-links.json
-
-# 2. Generate a validated link (and unique discount code) for every creator in your roster
-clk batch --config creator-links.json --roster roster.csv --out links.csv
-
-# 3. Later, audit what actually shipped (export from your tracker, link-in-bio, GA4…)
-clk audit --config creator-links.json --input live_links.csv
-
-# Optional: share a readable offline HTML report with a client
-clk audit --config creator-links.json --input live_links.csv --format html --out audit-report.html
-
-# Optional: QR codes for YouTube end screens or packaging inserts
-clk qr --input links.csv --out-dir qr-codes --format svg
 ```
 
-A roster row is just CSV:
+The generated file uses `mode: production`. Replace the example `base_url` and
+`owned_domains` before generating real links. In production mode, the base URL
+and every per-row destination must use an approved domain.
+
+Create a roster:
 
 ```csv
-handle,name,platform,landing_url
-glowwithgreta,Greta Mohr,youtube,
-thebudgetbeauty,Priya Nair,instagram,
-labcoatlucie,Lucie Novak,youtube,https://shop.example.com/glowdrop?bundle=pro
+brand_id,campaign_id,creator_id,placement_id,handle,name,platform,landing_url
+brd-glowdrop,cmp-glowdrop-launch,crt-greta,plc-greta-video-01,glowwithgreta,Greta Mohr,youtube,
+brd-glowdrop,cmp-glowdrop-launch,crt-greta,plc-greta-video-02,glowwithgreta,Greta Mohr,youtube,https://shop.example.com/product?bundle=pro
+brd-glowdrop,cmp-glowdrop-launch,crt-priya,plc-priya-video-01,thebudgetbeauty,Priya Nair,youtube,
 ```
 
-`clk batch` turns it into per-creator links that all follow the same
-convention - existing query params like `?bundle=pro` are preserved. When
-`batch.discount_code_template` is set, each row also receives a unique code:
-
-```csv
-handle,name,platform,landing_url,generated_url,discount_code,status,issues
-glowwithgreta,Greta Mohr,youtube,,https://shop.example.com/glowdrop?utm_source=youtube&utm_medium=influencer&utm_campaign=glowdrop-launch&utm_content=glowwithgreta,glowwithgreta15,ok,
-```
-
-And `clk audit` finds the real-world mess:
-
-```text
-  row 2: https://shop.example.com/glowdrop?utm_source=YouTube&utm_medium=...
-    ERROR  CLK105 ERROR: [utm_source] 'YouTube' only differs from an allowed value
-           by case; analytics tools treat these as different values (did you mean 'youtube'?)
-  row 4: https://shop.example.com/glowdrop?utm_source=tiktok&utm_campaign=...
-    ERROR  CLK102 ERROR: [utm_medium] required parameter is missing
-  Duplicate links:
-    ERROR  CLK005 ERROR: row 5 duplicates row 1: same destination and UTM values,
-           so reporting splits between rows
-
-  8 links checked: 3 clean, 3 error(s), 3 warning(s)
-```
-
-Try it on the included demo data:
+Generate a CSV plus one JSON link specification per line:
 
 ```bash
-clk batch --config examples/convention.json --roster examples/roster.csv
-clk audit --config examples/convention.json --input examples/live_links.csv
-clk audit --config examples/convention.json --input examples/live_links.csv --format html --out /tmp/audit.html
+clk batch \
+  --config creator-links.json \
+  --roster roster.csv \
+  --out links.csv \
+  --spec-out link-specs.jsonl
 ```
 
-## Discount codes (optional)
-
-Creator campaigns almost always need **both** a unique UTM link and a unique
-promo code. Codes capture purchases when someone never clicks the tracked link
-(dark social, cross-device, typed brand search). The batch generator can mint
-codes from the same roster:
-
-```json
-"batch": {
-  "param_map": { "...": "..." },
-  "url_column": "landing_url",
-  "discount_code_template": "{handle}15",
-  "discount_code_pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{1,31}$",
-  "discount_code_column": "discount_code"
-}
-```
-
-| Key | Meaning |
-| --- | --- |
-| `discount_code_template` | String template using roster columns (same `{column}` syntax as `param_map`) |
-| `discount_code_pattern` | Optional regex every generated code must match |
-| `discount_code_column` | Output CSV column name (default `discount_code`) |
-
-Rules enforced during `clk batch`:
-
-* Codes are unique within the batch (**case-insensitive** — `GRETA15` collides with `greta15`)
-* Empty expansions and pattern failures mark that row as `error` without stopping the rest of the roster
-* Omit `discount_code_template` entirely to leave codes out of the pipeline
-
-Codes are never sent to any network service. Create them in Shopify (or your
-store) from the CSV; this tool only governs naming and uniqueness offline.
-
-## HTML audit reports
-
-Use the self-contained HTML format when sharing an audit with a client:
-
-```bash
-clk audit --config examples/convention.json --input examples/live_links.csv --format html --out /tmp/audit.html
-```
-
-Audit output formats are `text` (default), `json`, `csv`, and `html`; the HTML report is offline and escapes dynamic values.
-
-## QR code export
-
-After `clk batch`, export scannable codes for creators who need physical or
-on-screen placements:
+Optional QR export remains offline and uses placement IDs for filenames when
+that column is present:
 
 ```bash
 pip install 'creator-link-kit[qr]'
 clk qr --input links.csv --out-dir qr-codes --format svg
-clk qr --url 'https://shop.example.com/glowdrop?utm_source=youtube&utm_medium=influencer&utm_campaign=glowdrop-launch&utm_content=glowwithgreta' --out-dir qr-codes
 ```
 
-- File names prefer the `handle` / `name` / `creator` column when present.
-- Default format is SVG (vector, print-friendly). PNG is available via `--format png`.
-- Error correction defaults to medium (`--error m`); raise to `h` for dense print.
-- Fully offline: no network calls, no telemetry, no link shortener APIs.
+The output CSV preserves the roster columns and adds:
 
-## The convention file
+- `generated_url`
+- `discount_code` when `batch.discount_code_template` is configured
+- `link_spec`
+- `status`
+- `issues`
+
+The v0.2 starter generates the discount code from `placement_id`, keeping link
+and code attribution at the same video-level grain. A duplicate non-empty
+`placement_id` causes every row carrying that duplicate to fail. Reusing a
+`creator_id` is expected and allowed. Discount-code uniqueness is checked
+case-insensitively across otherwise valid rows.
+
+## Build one link
+
+The ID arguments can supply `utm_id` and `utm_content` automatically when those
+parameters are governed by the convention:
+
+```bash
+clk build \
+  --config creator-links.json \
+  --param utm_source=youtube \
+  --param utm_campaign=cmp-glowdrop-launch \
+  --brand-id brd-glowdrop \
+  --campaign-id cmp-glowdrop-launch \
+  --creator-id crt-greta \
+  --placement-id plc-greta-video-01
+```
+
+Use JSON output when another tool or agent needs a durable specification:
+
+```bash
+clk build \
+  --config creator-links.json \
+  --param utm_source=youtube \
+  --param utm_campaign=cmp-glowdrop-launch \
+  --brand-id brd-glowdrop \
+  --campaign-id cmp-glowdrop-launch \
+  --creator-id crt-greta \
+  --placement-id plc-greta-video-01 \
+  --format json
+```
+
+The result has a stable, provider-neutral shape:
+
+```json
+{
+  "schema_version": 1,
+  "config_version": 1,
+  "original_destination": "https://shop.example.com/product",
+  "generated_destination": "https://shop.example.com/product?utm_medium=influencer&utm_source=youtube&utm_campaign=cmp-glowdrop-launch&utm_id=cmp-glowdrop-launch&utm_content=plc-greta-video-01",
+  "ids": {
+    "brand_id": "brd-glowdrop",
+    "campaign_id": "cmp-glowdrop-launch",
+    "creator_id": "crt-greta",
+    "placement_id": "plc-greta-video-01"
+  },
+  "audit": {
+    "valid": true,
+    "errors": 0,
+    "warnings": 0,
+    "issues": []
+  }
+}
+```
+
+The exact query-parameter order is not part of the specification contract.
+Consumers should parse the URL rather than compare its raw string ordering.
+
+## Convention file
+
+The starter convention is equivalent to:
 
 ```json
 {
   "version": 1,
-  "base_url": "https://shop.example.com/glowdrop",
+  "base_url": "https://shop.example.com/product",
   "owned_domains": ["example.com"],
+  "mode": "production",
   "casing": "lowercase",
   "max_value_length": 100,
-  "required": ["utm_source", "utm_medium", "utm_campaign"],
+  "required": [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_id",
+    "utm_content"
+  ],
   "parameters": {
-    "utm_source":   { "allowed": ["youtube", "instagram", "tiktok", "newsletter"] },
-    "utm_medium":   { "allowed": ["influencer", "social", "email", "cpc"] },
-    "utm_campaign": { "pattern": "^[a-z0-9][a-z0-9-]{2,48}$" },
-    "utm_content":  { "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
-    "utm_id":       { "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,99}$" }
+    "utm_source": {
+      "allowed": ["youtube", "instagram", "tiktok", "newsletter"]
+    },
+    "utm_medium": {
+      "allowed": ["influencer", "social", "email", "cpc"]
+    },
+    "utm_campaign": {
+      "pattern": "^[a-z0-9][a-z0-9-]{2,48}$"
+    },
+    "utm_id": {
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,99}$"
+    },
+    "utm_content": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    }
   },
-  "defaults": { "utm_medium": "influencer" },
+  "defaults": {
+    "utm_medium": "influencer"
+  },
   "batch": {
     "param_map": {
       "utm_source": "{platform}",
       "utm_medium": "influencer",
-      "utm_campaign": "glowdrop-launch",
-      "utm_content": "{handle}",
-      "utm_id": "cmp_product_launch"
+      "utm_campaign": "{campaign_id}",
+      "utm_id": "{campaign_id}",
+      "utm_content": "{placement_id}"
     },
     "url_column": "landing_url",
-    "discount_code_template": "{handle}15",
-    "discount_code_pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{1,31}$"
+    "id_columns": {
+      "brand_id": "brand_id",
+      "campaign_id": "campaign_id",
+      "creator_id": "creator_id",
+      "placement_id": "placement_id"
+    },
+    "discount_code_template": "{placement_id}",
+    "discount_code_pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{1,31}$",
+    "discount_code_column": "discount_code"
   }
 }
 ```
 
 | Key | Meaning |
 | --- | --- |
-| `base_url` | Default destination when a roster row has no URL of its own |
-| `owned_domains` | Your properties. Audit warns when a tagged link points anywhere else (typo, expired redirect, wrong property) |
-| `casing` | `lowercase` (recommended) or `any` |
-| `max_value_length` | Per-value character limit |
-| `required` | Parameters every link must carry |
-| `parameters` | Per-parameter rules: `allowed` (exact list) and/or `pattern` (regex) |
-| `defaults` | Values pre-filled by `build`/`batch` (e.g. medium is always `influencer`) |
-| `batch.param_map` | Templates per parameter; `{column}` pulls from the roster CSV |
-| `batch.url_column` | Roster column holding a per-row landing URL (optional) |
-| `batch.discount_code_*` | Optional unique promo-code generation (see above) |
+| `base_url` | Default destination when a row has no per-placement URL |
+| `owned_domains` | Approved destination roots; subdomains are accepted |
+| `mode` | `production` makes external destinations errors; `development` warns |
+| `casing` | `lowercase` or `any` |
+| `max_value_length` | Maximum length of each governed UTM value |
+| `required` | Parameters every generated or audited link must contain |
+| `parameters` | Per-parameter allowlists and regular-expression rules |
+| `defaults` | Values filled before validation |
+| `batch.param_map` | Templates that read values from each roster row |
+| `batch.url_column` | Optional per-row destination column |
+| `batch.id_columns` | Mapping from standard ID names to roster columns |
+| `batch.discount_code_template` | Optional roster template for placement codes |
+| `batch.discount_code_pattern` | Optional regex for generated discount codes |
+| `batch.discount_code_column` | Output column name; defaults to `discount_code` |
 
-YAML works too: name the file `*.yaml` and install the `[yaml]` extra.
+The four recognized identifier names are fixed intentionally:
+`brand_id`, `campaign_id`, `creator_id`, and `placement_id`. This whitelist keeps
+arbitrary roster data out of link specifications.
 
-### GA4 `utm_id` (campaign ID)
+YAML also works when the optional dependency is installed.
 
-`utm_id` is optional unless you add it to `required`. Audits enforce that one
-campaign name maps to one ID and one ID maps to one campaign name (`CLK110` /
-`CLK111`). Customize the starter value in `batch.param_map` for each campaign.
+## Production and development modes
+
+In `development` mode, a destination outside `owned_domains` produces `CLK003`
+as a warning. This retains the behavior of v0.1 configurations that do not have
+a `mode` key.
+
+In `production` mode:
+
+- at least one owned domain is required
+- `base_url` must use an owned domain
+- any generated or audited external destination produces `CLK003` as an error
+- link generation refuses to emit the invalid URL
+
+Domain checks accept the listed domain and its subdomains. For example,
+`example.com` approves both `example.com` and `shop.example.com`, but not
+`example.net`.
+
+## Discount codes
+
+Discount-code generation is optional and entirely offline. The starter uses:
+
+```json
+{
+  "discount_code_template": "{placement_id}",
+  "discount_code_pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{1,31}$",
+  "discount_code_column": "discount_code"
+}
+```
+
+Templates use the same `{column}` syntax as `batch.param_map`. Empty values,
+missing columns, pattern failures, and duplicate codes mark only the affected
+row as an error. Code uniqueness is case-insensitive, so `VIDEO15` and
+`video15` collide.
+
+Using `placement_id` in the starter is deliberate: one creator can publish
+multiple sponsored videos, and a creator-wide code cannot distinguish those
+placements. The generated CSV can be used by a private service or merchant
+integration to create the codes in the brand's commerce platform. This package
+does not make that network call.
+
+## QR code export
+
+Install the optional dependency and export from a batch CSV or explicit URLs:
+
+```bash
+pip install 'creator-link-kit[qr]'
+clk qr --input links.csv --out-dir qr-codes --format svg
+clk qr --url 'https://shop.example.com/product?...' --out-dir qr-codes
+```
+
+SVG is the default; PNG is also supported. Filenames prefer `placement_id`,
+then creator-oriented columns, and are sanitized against path traversal and
+case-insensitive collisions. URL validation rejects non-HTTP(S), malformed-port,
+and credentialed URLs. QR generation stays offline.
+
+## Provider-neutral integration
+
+The public package exposes models but no network client:
+
+```python
+from creator_link_kit import (
+    LinkIdentifiers,
+    LinkProvisionRequest,
+    build_link_specification,
+    load_convention,
+)
+
+convention = load_convention("creator-links.json")
+ids = LinkIdentifiers(
+    brand_id="brd-glowdrop",
+    campaign_id="cmp-glowdrop-launch",
+    creator_id="crt-greta",
+    placement_id="plc-greta-video-01",
+)
+specification = build_link_specification(
+    "https://shop.example.com/product",
+    {
+        "utm_source": "youtube",
+        "utm_campaign": "cmp-glowdrop-launch",
+    },
+    convention,
+    identifiers=ids,
+)
+request = LinkProvisionRequest.from_specification(
+    specification,
+    slug="greta-video-01",
+    tags=("youtube", "cmp-glowdrop-launch"),
+)
+```
+
+A private service can implement the `LinkProvider` protocol and translate
+`LinkProvisionRequest` into Dub, Short.io, or another provider's API. Provider
+credentials, webhook secrets, merchant integrations, orders, conversions, and
+customer records remain outside this repository.
+
+See `docs/PRIVATE_SERVICE_INTEGRATION.md` for the intended boundary.
+
+## Audit shipped links
+
+```bash
+clk audit \
+  --config creator-links.json \
+  --input live_links.csv \
+  --format json \
+  --out audit.json
+```
+
+For CSV input, the CLI automatically looks for common URL columns including
+`generated_url`, `url`, `link`, `landing_url`, and `destination_url`. Use
+`--url-column` to override detection.
+
+Warnings do not fail the command unless `--strict` is supplied. Errors always
+produce exit code 1. Across an audit set, `CLK110` rejects one `utm_campaign`
+paired with multiple `utm_id` values, and `CLK111` rejects one `utm_id` reused
+for multiple campaign names.
+
+Audit output supports `text`, `json`, `csv`, and `html`. HTML reports are
+self-contained, escape all dynamic content, and can be shared offline:
+
+```bash
+clk audit \
+  --config creator-links.json \
+  --input live_links.csv \
+  --format html \
+  --out audit.html
+```
+
+CSV exports neutralize cells that begin with spreadsheet formula trigger
+characters. In-memory rows and JSON, text, and HTML output are not modified.
+
+## GitHub Action
+
+A reusable composite action is included so another repository can enforce the
+same convention without hand-writing installation and CLI steps:
+
+```yaml
+- uses: actions/checkout@v4
+
+- name: Audit shipped creator links
+  uses: NeilFoxAgency/creator-link-kit@main
+  with:
+    config: creator-links.json
+    input: data/live_links.csv
+    format: html
+    strict: "true"
+    # url-column: generated_url
+```
+
+| Input | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `config` | yes | - | Convention file path |
+| `input` | yes | - | CSV or text file containing links |
+| `url-column` | no | auto | CSV column containing the URL |
+| `format` | no | `text` | `text`, `json`, `csv`, or `html` |
+| `strict` | no | `false` | Treat warnings as failures |
+| `python-version` | no | `3.12` | Python runtime for the action |
+| `version` | no | local or latest | Package version to install |
+
+The action uses the same exit codes as the CLI. The included example workflow
+is at `.github/workflows/example-audit.yml`.
 
 ## Rule codes
 
-Errors break or fragment attribution. Warnings are worth a look but don't fail
-an audit unless `--strict` is passed.
-
 | Code | Severity | Caught problem |
 | --- | --- | --- |
-| CLK001 | error | URL can't be parsed |
-| CLK002 | warning | plain `http` instead of `https` |
-| CLK003 | warning | destination outside your `owned_domains` |
-| CLK004 | warning | no UTM parameters at all (unattributed traffic) |
-| CLK005 | error | duplicate link (same destination + UTM values as an earlier row) |
-| CLK101 | warning | `utm_*` parameter with no governing rule |
-| CLK102 | error | required parameter missing |
-| CLK103 | error | parameter key repeated in the query string (double tagging) |
-| CLK104 | error | value not in the allowlist (with closest-match suggestion) |
-| CLK105 | error | value differs from an allowlisted value only by case |
-| CLK106 | error | value fails its regex pattern |
-| CLK107 | warning | uppercase value under a lowercase convention |
-| CLK108 | error | value over the length limit |
-| CLK109 | error | empty value |
-| CLK110 | error | same `utm_campaign` paired with multiple `utm_id` values in the audit set |
-| CLK111 | error | same `utm_id` paired with multiple `utm_campaign` values in the audit set |
+| `CLK001` | error | URL cannot be parsed or is not absolute HTTP(S) |
+| `CLK002` | warning | URL uses HTTP instead of HTTPS |
+| `CLK003` | mode-dependent | Destination is outside `owned_domains` |
+| `CLK004` | warning | URL has no UTM parameters |
+| `CLK005` | error | Duplicate destination and UTM values in an audit |
+| `CLK101` | warning | UTM parameter has no governing rule |
+| `CLK102` | error | Required parameter is missing |
+| `CLK103` | error | Parameter appears more than once |
+| `CLK104` | error | Value is not in its allowlist |
+| `CLK105` | error | Value differs from an allowed value only by case |
+| `CLK106` | error | Value does not match its required pattern |
+| `CLK107` | warning | Value is uppercase under a lowercase convention |
+| `CLK108` | error | Value exceeds the configured length |
+| `CLK109` | error | Value is empty |
+| `CLK110` | error | One `utm_campaign` is paired with multiple `utm_id` values |
+| `CLK111` | error | One `utm_id` is paired with multiple campaign names |
 
-## Exit codes (CI-friendly)
+Batch duplicate-placement failures are reported in the row's `issues` field
+before URL generation and do not receive a `CLK` code because they concern the
+roster, not a URL.
+
+## Exit codes
 
 | Code | Meaning |
 | --- | --- |
-| 0 | success - audit found no errors (warnings allowed unless `--strict`) |
-| 1 | validation failed - bad link, failing batch rows, or audit errors |
-| 2 | operational error - missing file, invalid config, bad arguments |
+| `0` | Success |
+| `1` | Validation, audit, or batch-row failures |
+| `2` | Configuration, file, argument, or operational error |
 
-Example: block merging a campaign tracker update that breaks the convention.
+## Migration from v0.1
 
-```yaml
-- name: Audit shipped creator links
-  run: |
-    pip install creator-link-kit
-    clk audit --config creator-links.json --input data/live_links.csv --strict
-```
+Existing version-1 convention files remain valid.
+
+- A missing `mode` defaults to `development`, preserving the earlier external
+  domain warning behavior.
+- A missing `batch.id_columns` remains valid.
+- Arbitrary governed `utm_*` parameters still work.
+- To adopt the v0.2 agency convention, add `utm_id`, map `utm_content` to a
+  stable placement ID, add the standard ID columns, and switch to production
+  mode after confirming `owned_domains`.
+- Existing configurations may keep `utm_id` optional. The v0.2 starter requires
+  it so every generated placement carries a stable campaign identifier.
+- Discount-code and QR features remain optional. The starter's code template is
+  placement-specific; remove `discount_code_template` to disable code output.
+
+The package release is `0.2.0`; the convention schema remains version `1`
+because these additions are backward-compatible optional fields.
+
+## Security and data boundary
+
+This repository may contain code, synthetic examples, naming conventions, and
+non-secret campaign identifiers. It must not contain:
+
+- API keys, OAuth tokens, passwords, webhook secrets, or private keys
+- merchant exports, orders, refunds, conversion events, or payment data
+- customer names, emails, addresses, or other personal data
+- private brand analytics or client reports
+- live merchant discount codes or unpublished QR assets
+
+Link specifications copy only the four approved identifier fields. They do not
+copy arbitrary roster columns. CSV files written by the CLI also neutralize
+spreadsheet-formula prefixes. URLs with malformed ports or embedded credentials
+are rejected during build and audit. See `SECURITY.md` and
+`docs/PRIVATE_SERVICE_INTEGRATION.md` for the full policy.
 
 ## Privacy
 
-The tool is fully offline: no network calls, no analytics, no telemetry, no
-link-shortener APIs. Your creator roster, campaign URLs, and discount codes
-never leave your machine. See `SECURITY.md`.
-
-## Roadmap
-
-* A GitHub Action wrapper for one-line CI audits
-
-Ideas and use cases welcome - see `CONTRIBUTING.md`.
+The package makes no network requests and includes no analytics or telemetry.
+All generation and auditing happens locally.
 
 ## License
 
-MIT - see `LICENSE`.
+MIT. See `LICENSE`.

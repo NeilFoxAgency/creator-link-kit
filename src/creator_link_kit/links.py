@@ -31,6 +31,16 @@ class Issue:
             url=url if url is not None else self.url,
         )
 
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "row": self.row,
+            "url": self.url,
+            "code": self.code,
+            "severity": self.severity,
+            "parameter": self.parameter,
+            "message": self.message,
+        }
+
 
 @dataclass(frozen=True)
 class AuditResult:
@@ -174,10 +184,11 @@ def validate_url(url: str, convention: Convention) -> list[Issue]:
     if convention.owned_domains and not _domain_is_owned(
         parsed.hostname or "", convention.owned_domains
     ):
+        severity = "error" if convention.mode == "production" else "warning"
         issues.append(
             Issue(
                 "CLK003",
-                "warning",
+                severity,
                 f"destination host {parsed.hostname!r} is outside owned_domains",
             )
         )
@@ -277,10 +288,8 @@ def _utm_params(url: str) -> dict[str, str] | None:
 def _campaign_id_consistency_issues(
     observations: list[tuple[int, str, str, str]],
 ) -> list[Issue]:
-    """Flag GA4 campaign-name / campaign-id mismatches across an audit set.
+    """Flag campaign-name and campaign-ID mismatches across an audit set."""
 
-    observations: (row, url, campaign, utm_id) for rows that carry both values.
-    """
     if not observations:
         return []
 
@@ -320,8 +329,6 @@ def _campaign_id_consistency_issues(
     for utm_id, campaigns in sorted(id_to_campaigns.items()):
         if len(campaigns) < 2:
             continue
-        # Already reported via CLK110 when the reverse map is also inconsistent;
-        # still report ID→campaign fan-out which is a distinct mistake.
         campaign_list = ", ".join(sorted(repr(value) for value in campaigns))
         for row, url, _campaign in id_to_rows[utm_id]:
             issues.append(
@@ -330,8 +337,9 @@ def _campaign_id_consistency_issues(
                     "error",
                     (
                         f"utm_id {utm_id!r} is paired with multiple "
-                        f"utm_campaign values across this audit set ({campaign_list}); "
-                        "the same GA4 campaign ID must not label different campaigns"
+                        f"utm_campaign values across this audit set "
+                        f"({campaign_list}); the same GA4 campaign ID must not "
+                        "label different campaigns"
                     ),
                     parameter="utm_id",
                     row=row,
