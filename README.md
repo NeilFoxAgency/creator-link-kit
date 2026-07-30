@@ -58,6 +58,7 @@ Or run from a clone:
 git clone https://github.com/NeilFoxAgency/creator-link-kit
 cd creator-link-kit
 pip install -e ".[qr]"   # or pip install -e . without QR support
+pip install -e "[qr]"   # or pip install -e . without QR support
 ```
 
 ## Quickstart
@@ -74,6 +75,8 @@ clk audit --config creator-links.json --input live_links.csv
 
 # 4. Optional: QR codes for YouTube end screens or packaging inserts
 clk qr --input links.csv --out-dir qr-codes --format svg
+# Optional: share a readable offline HTML report with a client
+clk audit --config creator-links.json --input live_links.csv --format html --out audit-report.html
 ```
 
 A roster row is just CSV:
@@ -130,6 +133,20 @@ clk qr --url 'https://shop.example.com/glowdrop?utm_source=youtube&utm_medium=in
 - Default format is SVG (vector, print-friendly). PNG is available via `--format png`.
 - Error correction defaults to medium (`--error m`); raise to `h` for dense print.
 - Fully offline: no network calls, no telemetry, no link shortener APIs.
+clk audit --config examples/convention.json --input examples/live_links.csv --format html --out /tmp/audit.html
+```
+
+Audit output formats: `text` (default), `json`, `csv`, and `html` (self-contained page for client sharing; all dynamic values are HTML-escaped).
+
+## HTML audit reports
+
+Use the self-contained HTML format when sharing an audit with a client:
+
+```bash
+clk audit --config examples/convention.json --input examples/live_links.csv --format html --out /tmp/audit.html
+```
+
+Audit output formats are `text` (default), `json`, `csv`, and `html`; the HTML report is offline and escapes dynamic values.
 
 ## The convention file
 
@@ -221,7 +238,6 @@ machine. See `SECURITY.md`.
 
 ## Roadmap
 
-* Optional HTML audit report for sharing with clients
 * `utm_id` (GA4 campaign ID) governance helpers
 * A GitHub Action wrapper for one-line CI audits
 

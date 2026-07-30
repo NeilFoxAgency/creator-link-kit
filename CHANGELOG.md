@@ -6,6 +6,7 @@
   links (YouTube end screens, packaging inserts, events). Install with
   `pip install 'creator-link-kit[qr]'` (segno). Core package remains
   dependency-free; generation is fully offline.
+- Added optional HTML audit report (`clk audit --format html`) for offline client sharing with escaped dynamic content.
 
 ## 0.1.0 - 2026-07-16
 
