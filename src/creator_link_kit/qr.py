@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import csv
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from urllib.parse import urlsplit
 
 
 class QrDependencyError(RuntimeError):
@@ -30,6 +31,7 @@ def _require_segno():
 
 
 _SAFE_NAME = re.compile(r"[^a-zA-Z0-9._-]+")
+_MAX_FILENAME_LENGTH = 80
 
 
 def safe_filename(stem: str, *, max_length: int = 80) -> str:
@@ -139,20 +141,29 @@ def write_qr_codes(
     failed = 0
     paths: list[str] = []
     total = 0
-    used_stems: dict[str, int] = {}
+    used_stems: set[str] = set()
 
     for job in jobs:
         total += 1
-        stem = job.stem
-        if stem in used_stems:
-            used_stems[stem] += 1
-            stem = f"{stem}-{used_stems[job.stem]}"
-        else:
-            used_stems[stem] = 1
+        base_stem = safe_filename(job.stem, max_length=_MAX_FILENAME_LENGTH)
+        stem = base_stem
+        suffix = 2
+        while stem.casefold() in used_stems:
+            suffix_text = f"-{suffix}"
+            stem = base_stem[: _MAX_FILENAME_LENGTH - len(suffix_text)] + suffix_text
+            suffix += 1
+        used_stems.add(stem.casefold())
         destination = output_dir / f"{stem}.{fmt}"
         try:
-            if not job.url.startswith(("http://", "https://")):
+            parsed = urlsplit(job.url)
+            if parsed.scheme.lower() not in {"http", "https"} or not parsed.netloc:
                 raise ValueError("URL must be absolute http or https")
+            if parsed.username is not None or parsed.password is not None:
+                raise ValueError("URL must not include embedded credentials")
+            try:
+                _ = parsed.port
+            except ValueError as exc:
+                raise ValueError("URL has an invalid port") from exc
             qr = segno.make(job.url, error=error)
             if fmt == "svg":
                 qr.save(str(destination), scale=scale, xmldecl=True)
@@ -162,6 +173,4 @@ def write_qr_codes(
             paths.append(str(destination))
         except Exception:
             failed += 1
-    return QrSummary(
-        total=total, written=written, failed=failed, paths=tuple(paths)
-    )
+    return QrSummary(total=total, written=written, failed=failed, paths=tuple(paths))
