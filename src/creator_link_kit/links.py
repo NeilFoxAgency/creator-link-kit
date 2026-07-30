@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from difflib import get_close_matches
-import re
-from typing import Iterable, Mapping
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from .config import Convention
@@ -21,7 +21,7 @@ class Issue:
     row: int | None = None
     url: str | None = None
 
-    def with_context(self, *, row: int | None = None, url: str | None = None) -> "Issue":
+    def with_context(self, *, row: int | None = None, url: str | None = None) -> Issue:
         return Issue(
             code=self.code,
             severity=self.severity,
@@ -53,7 +53,9 @@ class AuditResult:
 
 def _domain_is_owned(host: str, owned_domains: tuple[str, ...]) -> bool:
     host = host.lower().rstrip(".")
-    return any(host == domain or host.endswith("." + domain) for domain in owned_domains)
+    return any(
+        host == domain or host.endswith("." + domain) for domain in owned_domains
+    )
 
 
 def validate_params(
@@ -93,12 +95,14 @@ def validate_params(
                 )
             )
         if convention.casing == "lowercase" and value != value.lower():
-            issues.append(
-                Issue("CLK107", "warning", "value is not lowercase", key)
-            )
+            issues.append(Issue("CLK107", "warning", "value is not lowercase", key))
         if rule.allowed and value not in rule.allowed:
             case_match = next(
-                (candidate for candidate in rule.allowed if candidate.lower() == value.lower()),
+                (
+                    candidate
+                    for candidate in rule.allowed
+                    if candidate.lower() == value.lower()
+                ),
                 None,
             )
             if case_match is not None:
@@ -106,7 +110,10 @@ def validate_params(
                     Issue(
                         "CLK105",
                         "error",
-                        f"{value!r} differs from allowed value {case_match!r} only by case",
+                        (
+                            f"{value!r} differs from allowed value "
+                            f"{case_match!r} only by case"
+                        ),
                         key,
                     )
                 )
@@ -208,10 +215,14 @@ def build_url(
     issues = validate_params(merged, convention)
     errors = [issue for issue in issues if issue.severity == "error"]
     if errors:
-        raise ValueError("; ".join(f"{i.code} {i.parameter}: {i.message}" for i in errors))
+        raise ValueError(
+            "; ".join(f"{i.code} {i.parameter}: {i.message}" for i in errors)
+        )
 
     query = urlencode(existing_pairs + list(merged.items()), doseq=True)
-    result = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, query, parsed.fragment))
+    result = urlunsplit(
+        (parsed.scheme, parsed.netloc, parsed.path, query, parsed.fragment)
+    )
     final_errors = [
         issue for issue in validate_url(result, convention) if issue.severity == "error"
     ]
@@ -254,7 +265,10 @@ def audit_urls(urls: Iterable[str], convention: Convention) -> AuditResult:
                     Issue(
                         "CLK005",
                         "error",
-                        f"duplicates row {seen[canonical]}: same destination and UTM values",
+                        (
+                            f"duplicates row {seen[canonical]}: same destination "
+                            "and UTM values"
+                        ),
                         row=row,
                         url=url,
                     )

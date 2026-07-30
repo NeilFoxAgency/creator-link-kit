@@ -8,6 +8,7 @@ import io
 import json
 from collections import defaultdict
 
+from .csvsafe import safe_row
 from .links import AuditResult, Issue
 
 
@@ -41,7 +42,7 @@ def to_csv(result: AuditResult) -> str:
     fieldnames = ["row", "url", "code", "severity", "parameter", "message"]
     writer = csv.DictWriter(buffer, fieldnames=fieldnames)
     writer.writeheader()
-    writer.writerows(issue_dict(issue) for issue in result.issues)
+    writer.writerows(safe_row(issue_dict(issue)) for issue in result.issues)
     return buffer.getvalue()
 
 
