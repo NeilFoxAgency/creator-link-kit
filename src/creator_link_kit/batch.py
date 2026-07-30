@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import csv
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from string import Formatter
-from typing import Iterable
 
 from .config import Convention
 from .csvsafe import safe_row
@@ -22,9 +22,7 @@ class BatchSummary:
 
 def _template_fields(template: str) -> set[str]:
     return {
-        field_name
-        for _, field_name, _, _ in Formatter().parse(template)
-        if field_name
+        field_name for _, field_name, _, _ in Formatter().parse(template) if field_name
     }
 
 
@@ -81,7 +79,9 @@ def batch_csv(
         destination = Path(output_path)
         destination.parent.mkdir(parents=True, exist_ok=True)
         with destination.open("w", newline="", encoding="utf-8") as handle:
-            writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+            writer = csv.DictWriter(
+                handle, fieldnames=fieldnames, extrasaction="ignore"
+            )
             writer.writeheader()
             writer.writerows(safe_row(row) for row in rows)
     return rows, summary
