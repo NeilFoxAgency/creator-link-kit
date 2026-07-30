@@ -1,4 +1,4 @@
-handle,name,platform,landing_url
-glowwithgreta,Greta Mohr,youtube,
-thebudgetbeauty,Priya Nair,instagram,
-labcoatlucie,Lucie Novak,youtube,https://shop.example.com/glowdrop?bundle=pro
+brand_id,campaign_id,creator_id,placement_id,handle,name,platform,landing_url
+brd-glowdrop,cmp-glowdrop-launch,crt-greta,plc-greta-video-01,glowwithgreta,Greta Mohr,youtube,
+brd-glowdrop,cmp-glowdrop-launch,crt-greta,plc-greta-video-02,glowwithgreta,Greta Mohr,youtube,https://shop.example.com/glowdrop?bundle=pro
+brd-glowdrop,cmp-glowdrop-launch,crt-priya,plc-priya-video-01,thebudgetbeauty,Priya Nair,youtube,

@@ -12,7 +12,8 @@ from . import __version__
 from .batch import batch_csv
 from .config import ConfigError, load_convention, starter_convention
 from .csvsafe import safe_row
-from .links import audit_urls, build_url
+from .links import audit_urls
+from .models import LinkIdentifiers
 from .qr import (
     QrDependencyError,
     make_qr_jobs_from_csv,
@@ -20,6 +21,7 @@ from .qr import (
     write_qr_codes,
 )
 from .report import to_csv, to_html, to_json, to_text
+from .spec import build_link_specification
 
 
 def _param(value: str) -> tuple[str, str]:
@@ -57,6 +59,13 @@ def _read_audit_urls(path: Path, url_column: str | None) -> list[str]:
     return [line.strip() for line in path.read_text(encoding="utf-8").splitlines()]
 
 
+def _add_identifier_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--brand-id")
+    parser.add_argument("--campaign-id")
+    parser.add_argument("--creator-id")
+    parser.add_argument("--placement-id")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="clk",
@@ -78,11 +87,17 @@ def build_parser() -> argparse.ArgumentParser:
     build_parser_.add_argument("--config", required=True)
     build_parser_.add_argument("--url")
     build_parser_.add_argument("--param", action="append", default=[], type=_param)
+    build_parser_.add_argument("--format", choices=("url", "json"), default="url")
+    _add_identifier_arguments(build_parser_)
 
     batch_parser = subparsers.add_parser("batch", help="generate links from a CSV")
     batch_parser.add_argument("--config", required=True)
     batch_parser.add_argument("--roster", required=True)
     batch_parser.add_argument("--out")
+    batch_parser.add_argument(
+        "--spec-out",
+        help="write one machine-readable link specification per JSONL line",
+    )
 
     audit_parser = subparsers.add_parser("audit", help="audit links from CSV or text")
     audit_parser.add_argument("--config", required=True)
@@ -111,7 +126,7 @@ def build_parser() -> argparse.ArgumentParser:
     qr_parser.add_argument("--url-column", help="CSV column holding the URL")
     qr_parser.add_argument(
         "--name-column",
-        help="CSV column used for file names (default: handle/name/creator)",
+        help="CSV column used for file names (default: placement ID or creator)",
     )
     qr_parser.add_argument(
         "--out-dir",
@@ -184,8 +199,8 @@ def main(argv: list[str] | None = None) -> int:
                 error=args.error,
             )
             print(
-                f"Wrote {summary.written}/{summary.total} QR codes to {args.out_dir}; "
-                f"{summary.failed} failed",
+                f"Wrote {summary.written}/{summary.total} QR codes to "
+                f"{args.out_dir}; {summary.failed} failed",
                 file=sys.stderr,
             )
             return 1 if summary.failed else 0
@@ -198,20 +213,41 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "build":
             params = dict(args.param)
-            print(build_url(args.url or convention.base_url, params, convention))
+            identifiers = LinkIdentifiers(
+                brand_id=args.brand_id,
+                campaign_id=args.campaign_id or params.get("utm_id"),
+                creator_id=args.creator_id,
+                placement_id=args.placement_id,
+            )
+            specification = build_link_specification(
+                args.url or convention.base_url,
+                params,
+                convention,
+                identifiers=identifiers,
+            )
+            if args.format == "json":
+                print(specification.to_json())
+            else:
+                print(specification.generated_destination)
             return 0
 
         if args.command == "batch":
-            rows, summary = batch_csv(args.roster, args.out, convention)
+            rows, summary = batch_csv(
+                args.roster,
+                args.out,
+                convention,
+                spec_output_path=args.spec_out,
+            )
             if args.out is None:
                 fieldnames: list[str] = []
                 for row in rows:
                     for key in row:
                         if key not in fieldnames:
                             fieldnames.append(key)
-                writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
-                writer.writeheader()
-                writer.writerows(safe_row(row) for row in rows)
+                if fieldnames:
+                    writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(safe_row(row) for row in rows)
             print(
                 f"Generated {summary.ok}/{summary.total} links; "
                 f"{summary.failed} failed",
@@ -238,7 +274,7 @@ def main(argv: list[str] | None = None) -> int:
     except QrDependencyError as exc:
         print(f"clk: {exc}", file=sys.stderr)
         return 2
-    except (ConfigError, OSError, ValueError) as exc:
+    except (ConfigError, OSError, TypeError, ValueError) as exc:
         print(f"clk: {exc}", file=sys.stderr)
         return 2
     return 2

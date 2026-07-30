@@ -7,9 +7,10 @@ from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from difflib import get_close_matches
-from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from .config import Convention
+from .config import Convention, domain_is_owned
+from .urls import authority_error as _authority_error
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,16 @@ class Issue:
             url=url if url is not None else self.url,
         )
 
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "row": self.row,
+            "url": self.url,
+            "code": self.code,
+            "severity": self.severity,
+            "parameter": self.parameter,
+            "message": self.message,
+        }
+
 
 @dataclass(frozen=True)
 class AuditResult:
@@ -49,23 +60,6 @@ class AuditResult:
     def clean(self) -> int:
         bad_rows = {issue.row for issue in self.issues if issue.row is not None}
         return max(0, self.checked - len(bad_rows))
-
-
-def _domain_is_owned(host: str, owned_domains: tuple[str, ...]) -> bool:
-    host = host.lower().rstrip(".")
-    return any(
-        host == domain or host.endswith("." + domain) for domain in owned_domains
-    )
-
-
-def _authority_error(parsed: SplitResult) -> str | None:
-    if parsed.username is not None or parsed.password is not None:
-        return "URL must not include embedded credentials"
-    try:
-        _ = parsed.port
-    except ValueError as exc:
-        return f"URL has an invalid port: {exc}"
-    return None
 
 
 def validate_params(
@@ -171,13 +165,14 @@ def validate_url(url: str, convention: Convention) -> list[Issue]:
         return [Issue("CLK001", "error", authority_error, url=url)]
     if parsed.scheme == "http":
         issues.append(Issue("CLK002", "warning", "URL uses http instead of https"))
-    if convention.owned_domains and not _domain_is_owned(
+    if convention.owned_domains and not domain_is_owned(
         parsed.hostname or "", convention.owned_domains
     ):
+        severity = "error" if convention.mode == "production" else "warning"
         issues.append(
             Issue(
                 "CLK003",
-                "warning",
+                severity,
                 f"destination host {parsed.hostname!r} is outside owned_domains",
             )
         )
@@ -277,10 +272,8 @@ def _utm_params(url: str) -> dict[str, str] | None:
 def _campaign_id_consistency_issues(
     observations: list[tuple[int, str, str, str]],
 ) -> list[Issue]:
-    """Flag GA4 campaign-name / campaign-id mismatches across an audit set.
+    """Flag campaign-name and campaign-ID mismatches across an audit set."""
 
-    observations: (row, url, campaign, utm_id) for rows that carry both values.
-    """
     if not observations:
         return []
 
@@ -320,8 +313,6 @@ def _campaign_id_consistency_issues(
     for utm_id, campaigns in sorted(id_to_campaigns.items()):
         if len(campaigns) < 2:
             continue
-        # Already reported via CLK110 when the reverse map is also inconsistent;
-        # still report ID→campaign fan-out which is a distinct mistake.
         campaign_list = ", ".join(sorted(repr(value) for value in campaigns))
         for row, url, _campaign in id_to_rows[utm_id]:
             issues.append(
@@ -330,8 +321,9 @@ def _campaign_id_consistency_issues(
                     "error",
                     (
                         f"utm_id {utm_id!r} is paired with multiple "
-                        f"utm_campaign values across this audit set ({campaign_list}); "
-                        "the same GA4 campaign ID must not label different campaigns"
+                        f"utm_campaign values across this audit set "
+                        f"({campaign_list}); the same GA4 campaign ID must not "
+                        "label different campaigns"
                     ),
                     parameter="utm_id",
                     row=row,
