@@ -13,6 +13,9 @@ reaches your analytics.
 `creator-link-kit` (CLI: `clk`) catches all of this offline, in seconds, with
 zero dependencies and no data leaving your machine.
 
+The same `utm_campaign` paired with two different `utm_id` values splits GA4
+campaign ID reporting; audits enforce one-to-one campaign/ID consistency.
+
 ## What it does
 
 | Command | Purpose |
@@ -166,13 +169,14 @@ Audit output formats are `text` (default), `json`, `csv`, and `html`; the HTML r
   "base_url": "https://shop.example.com/glowdrop",
   "owned_domains": ["example.com"],
   "casing": "lowercase",
-  "max_value_length": 80,
+  "max_value_length": 100,
   "required": ["utm_source", "utm_medium", "utm_campaign"],
   "parameters": {
     "utm_source":   { "allowed": ["youtube", "instagram", "tiktok", "newsletter"] },
     "utm_medium":   { "allowed": ["influencer", "social", "email", "cpc"] },
     "utm_campaign": { "pattern": "^[a-z0-9][a-z0-9-]{2,48}$" },
-    "utm_content":  { "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" }
+    "utm_content":  { "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "utm_id":       { "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,99}$" }
   },
   "defaults": { "utm_medium": "influencer" },
   "batch": {
@@ -180,7 +184,8 @@ Audit output formats are `text` (default), `json`, `csv`, and `html`; the HTML r
       "utm_source": "{platform}",
       "utm_medium": "influencer",
       "utm_campaign": "glowdrop-launch",
-      "utm_content": "{handle}"
+      "utm_content": "{handle}",
+      "utm_id": "cmp_product_launch"
     },
     "url_column": "landing_url",
     "discount_code_template": "{handle}15",
@@ -204,6 +209,12 @@ Audit output formats are `text` (default), `json`, `csv`, and `html`; the HTML r
 
 YAML works too: name the file `*.yaml` and install the `[yaml]` extra.
 
+### GA4 `utm_id` (campaign ID)
+
+`utm_id` is optional unless you add it to `required`. Audits enforce that one
+campaign name maps to one ID and one ID maps to one campaign name (`CLK110` /
+`CLK111`). Customize the starter value in `batch.param_map` for each campaign.
+
 ## Rule codes
 
 Errors break or fragment attribution. Warnings are worth a look but don't fail
@@ -225,6 +236,8 @@ an audit unless `--strict` is passed.
 | CLK107 | warning | uppercase value under a lowercase convention |
 | CLK108 | error | value over the length limit |
 | CLK109 | error | empty value |
+| CLK110 | error | same `utm_campaign` paired with multiple `utm_id` values in the audit set |
+| CLK111 | error | same `utm_id` paired with multiple `utm_campaign` values in the audit set |
 
 ## Exit codes (CI-friendly)
 
@@ -252,7 +265,6 @@ never leave your machine. See `SECURITY.md`.
 ## Roadmap
 
 * QR code export for YouTube end screens and packaging inserts
-* `utm_id` (GA4 campaign ID) governance helpers
 * A GitHub Action wrapper for one-line CI audits
 
 Ideas and use cases welcome - see `CONTRIBUTING.md`.
