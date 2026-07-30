@@ -70,6 +70,9 @@ clk batch --config creator-links.json --roster roster.csv --out links.csv
 
 # 3. Later, audit what actually shipped (export from your tracker, link-in-bio, GA4…)
 clk audit --config creator-links.json --input live_links.csv
+
+# Optional: share a readable offline HTML report with a client
+clk audit --config creator-links.json --input live_links.csv --format html --out audit-report.html
 ```
 
 A roster row is just CSV:
@@ -89,7 +92,10 @@ Try it on the included demo data:
 ```bash
 clk batch --config examples/convention.json --roster examples/roster.csv
 clk audit --config examples/convention.json --input examples/live_links.csv
+clk audit --config examples/convention.json --input examples/live_links.csv --format html --out /tmp/audit.html
 ```
+
+Audit output formats are `text` (default), `json`, `csv`, and `html`; the HTML report is self-contained, offline, and escapes dynamic values.
 
 ## The convention file
 
@@ -193,10 +199,17 @@ The tool is fully offline: no network calls, no analytics, no telemetry, no
 link-shortener APIs. Your creator roster and campaign URLs never leave your
 machine. See `SECURITY.md`.
 
+## HTML audit reports
+
+Use the self-contained HTML format when sharing an audit with a client:
+
+```bash
+clk audit --config examples/convention.json --input examples/live_links.csv --format html --out /tmp/audit.html
+```
+
 ## Roadmap
 
 * QR code export for YouTube end screens and packaging inserts
-* Optional HTML audit report for sharing with clients
 * A GitHub Action wrapper for one-line CI audits
 
 Ideas and use cases welcome - see `CONTRIBUTING.md`.
