@@ -31,9 +31,7 @@ class BatchTests(unittest.TestCase):
         }
 
     def test_generate_good_rows(self):
-        rows, summary = generate_rows(
-            [self.row("plc-greta-video-01")], self.convention
-        )
+        rows, summary = generate_rows([self.row("plc-greta-video-01")], self.convention)
         self.assertEqual(summary.ok, 1)
         self.assertEqual(rows[0]["status"], "ok")
         self.assertIn("utm_id=cmp-glowdrop-launch", rows[0]["generated_url"])

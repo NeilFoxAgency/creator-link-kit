@@ -78,9 +78,7 @@ class LinkIdentifiers:
         if columns:
             unknown = sorted(set(columns) - set(IDENTIFIER_FIELDS))
             if unknown:
-                raise ValueError(
-                    "unknown identifier field(s): " + ", ".join(unknown)
-                )
+                raise ValueError("unknown identifier field(s): " + ", ".join(unknown))
             column_names.update(columns)
         extracted: dict[str, str | None] = {}
         for field_name, column_name in column_names.items():
@@ -96,8 +94,7 @@ class LinkIdentifiers:
 
     def as_dict(self) -> dict[str, str | None]:
         return {
-            field_name: getattr(self, field_name)
-            for field_name in IDENTIFIER_FIELDS
+            field_name: getattr(self, field_name) for field_name in IDENTIFIER_FIELDS
         }
 
 

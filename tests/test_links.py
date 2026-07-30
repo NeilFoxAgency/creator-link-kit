@@ -82,9 +82,7 @@ class LinkTests(unittest.TestCase):
         self.assertIn("CLK103", {issue.code for issue in issues})
 
     def test_external_domain_is_error_in_production(self):
-        issues = validate_url(
-            self.tagged_url(host="evil.example.net"), self.convention
-        )
+        issues = validate_url(self.tagged_url(host="evil.example.net"), self.convention)
         issue = next(item for item in issues if item.code == "CLK003")
         self.assertEqual(issue.severity, "error")
 

@@ -25,9 +25,7 @@ class BatchSummary:
 
 def _template_fields(template: str) -> set[str]:
     return {
-        field_name
-        for _, field_name, _, _ in Formatter().parse(template)
-        if field_name
+        field_name for _, field_name, _, _ in Formatter().parse(template) if field_name
     }
 
 
@@ -46,13 +44,10 @@ def _render_discount_code(row: dict[str, str], convention: Convention) -> str | 
     template = convention.batch.discount_code_template
     if not template:
         return None
-    missing = sorted(
-        field for field in _template_fields(template) if field not in row
-    )
+    missing = sorted(field for field in _template_fields(template) if field not in row)
     if missing:
         raise ValueError(
-            "discount_code_template references missing column(s): "
-            + ", ".join(missing)
+            "discount_code_template references missing column(s): " + ", ".join(missing)
         )
     code = template.format_map(row).strip()
     if not code:

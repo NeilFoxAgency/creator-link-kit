@@ -36,9 +36,7 @@ class BatchConfig:
         return self.id_columns.get("placement_id", "placement_id")
 
 
-_BATCH_OUTPUT_COLUMNS = frozenset(
-    {"generated_url", "link_spec", "status", "issues"}
-)
+_BATCH_OUTPUT_COLUMNS = frozenset({"generated_url", "link_spec", "status", "issues"})
 
 
 @dataclass(frozen=True)
@@ -239,9 +237,7 @@ def convention_from_dict(raw: dict[str, Any]) -> Convention:
         try:
             re.compile(discount_code_pattern)
         except re.error as exc:
-            raise ConfigError(
-                f"batch.discount_code_pattern is invalid: {exc}"
-            ) from exc
+            raise ConfigError(f"batch.discount_code_pattern is invalid: {exc}") from exc
 
     discount_code_column = _expect_string(
         batch_raw.get("discount_code_column", "discount_code"),
@@ -312,9 +308,7 @@ def starter_convention() -> dict[str, Any]:
             "utm_content",
         ],
         "parameters": {
-            "utm_source": {
-                "allowed": ["youtube", "instagram", "tiktok", "newsletter"]
-            },
+            "utm_source": {"allowed": ["youtube", "instagram", "tiktok", "newsletter"]},
             "utm_medium": {"allowed": ["influencer", "social", "email", "cpc"]},
             "utm_campaign": {"pattern": "^[a-z0-9][a-z0-9-]{2,48}$"},
             "utm_id": {"pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,99}$"},

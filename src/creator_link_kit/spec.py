@@ -46,9 +46,7 @@ def build_link_specification(
         brand_id=supplied_identifiers.brand_id,
         campaign_id=supplied_identifiers.campaign_id or params.get("utm_id"),
         creator_id=supplied_identifiers.creator_id,
-        placement_id=(
-            supplied_identifiers.placement_id or params.get("utm_content")
-        ),
+        placement_id=(supplied_identifiers.placement_id or params.get("utm_content")),
     )
     effective_params = _params_with_identifier_defaults(
         params, convention, resolved_identifiers

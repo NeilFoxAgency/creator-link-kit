@@ -186,9 +186,7 @@ def main(argv: list[str] | None = None) -> int:
                 else:
                     urls = [
                         line.strip()
-                        for line in input_path.read_text(
-                            encoding="utf-8"
-                        ).splitlines()
+                        for line in input_path.read_text(encoding="utf-8").splitlines()
                     ]
                     jobs.extend(make_qr_jobs_from_urls(urls))
             if not jobs:
