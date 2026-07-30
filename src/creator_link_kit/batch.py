@@ -10,6 +10,7 @@ from pathlib import Path
 from string import Formatter
 
 from .config import Convention
+from .csvsafe import safe_row
 from .links import build_url
 
 
@@ -125,5 +126,5 @@ def batch_csv(
                 handle, fieldnames=fieldnames, extrasaction="ignore"
             )
             writer.writeheader()
-            writer.writerows(rows)
+            writer.writerows(safe_row(row) for row in rows)
     return rows, summary
