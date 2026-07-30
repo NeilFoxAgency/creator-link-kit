@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added optional HTML audit report (`clk audit --format html`) for offline client sharing with escaped dynamic content.
 - Added optional per-creator **discount code** generation during `clk batch`:
   template expansion from roster columns, regex validation, case-insensitive
   uniqueness, and a dedicated output column. Starter convention and examples
