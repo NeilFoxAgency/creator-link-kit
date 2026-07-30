@@ -2,58 +2,7 @@
 
 from __future__ import annotations
 
-import re
-from collections import Counter, defaultdict
-from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
-from difflib import get_close_matches
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
-
-from .config import Convention
-
-
-@dataclass(frozen=True)
-class Issue:
-    code: str
-    severity: str
-    message: str
-    parameter: str | None = None
-    row: int | None = None
-    url: str | None = None
-
-    def with_context(self, *, row: int | None = None, url: str | None = None) -> Issue:
-        return Issue(
-            code=self.code,
-            severity=self.severity,
-            message=self.message,
-            parameter=self.parameter,
-            row=row if row is not None else self.row,
-            url=url if url is not None else self.url,
-        )
-
-
-@dataclass(frozen=True)
-class AuditResult:
-    checked: int
-    issues: tuple[Issue, ...]
-
-    @property
-    def errors(self) -> tuple[Issue, ...]:
-        return tuple(issue for issue in self.issues if issue.severity == "error")
-
-    @property
-    def warnings(self) -> tuple[Issue, ...]:
-        return tuple(issue for issue in self.issues if issue.severity == "warning")
-
-    @property
-    def clean(self) -> int:
-        bad_rows = {issue.row for issue in self.issues if issue.row is not None}
-        return max(0, self.checked - len(bad_rows))
-
-
-def _domain_is_owned(host: str, owned_domains: tuple[str, ...]) -> bool:
-    host = host.lower().rstrip(".")
-    return any(
+im…418 tokens truncated…y(
         host == domain or host.endswith("." + domain) for domain in owned_domains
     )
 
