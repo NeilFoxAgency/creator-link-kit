@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import json
-from pathlib import Path
 import re
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -124,7 +124,9 @@ def convention_from_dict(raw: dict[str, Any]) -> Convention:
             try:
                 re.compile(pattern)
             except re.error as exc:
-                raise ConfigError(f"parameters.{key}.pattern is invalid: {exc}") from exc
+                raise ConfigError(
+                    f"parameters.{key}.pattern is invalid: {exc}"
+                ) from exc
         parameters[key] = ParameterRule(tuple(allowed_raw), pattern)
 
     required_raw = raw.get("required", [])
@@ -197,9 +199,7 @@ def starter_convention() -> dict[str, Any]:
         "max_value_length": 100,
         "required": ["utm_source", "utm_medium", "utm_campaign"],
         "parameters": {
-            "utm_source": {
-                "allowed": ["youtube", "instagram", "tiktok", "newsletter"]
-            },
+            "utm_source": {"allowed": ["youtube", "instagram", "tiktok", "newsletter"]},
             "utm_medium": {"allowed": ["influencer", "social", "email", "cpc"]},
             "utm_campaign": {"pattern": "^[a-z0-9][a-z0-9-]{2,48}$"},
             "utm_content": {"pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"},
