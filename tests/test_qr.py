@@ -43,9 +43,7 @@ class JobBuilderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "links.csv"
             with path.open("w", newline="", encoding="utf-8") as handle:
-                writer = csv.DictWriter(
-                    handle, fieldnames=["handle", "generated_url"]
-                )
+                writer = csv.DictWriter(handle, fieldnames=["handle", "generated_url"])
                 writer.writeheader()
                 writer.writerow(
                     {
@@ -101,17 +99,21 @@ class WriteQrTests(unittest.TestCase):
                 summary = write_qr_codes(
                     [
                         QrJob("https://example.com/a", "alpha"),
-                        QrJob("https://example.com/b", "alpha"),  # collision
+                        QrJob("https://example.com/b", "ALPHA"),  # case collision
+                        QrJob("https://example.com/c", "alpha-2"),  # suffix collision
+                        QrJob("https://example.com/d", "../unsafe"),
                         QrJob("not-a-url", "bad"),
                     ],
                     out,
                     fmt="svg",
                 )
-            self.assertEqual(summary.total, 3)
-            self.assertEqual(summary.written, 2)
+            self.assertEqual(summary.total, 5)
+            self.assertEqual(summary.written, 4)
             self.assertEqual(summary.failed, 1)
             self.assertTrue((out / "alpha.svg").exists())
             self.assertTrue((out / "alpha-2.svg").exists())
+            self.assertTrue((out / "alpha-2-2.svg").exists())
+            self.assertTrue((out / "unsafe.svg").exists())
 
 
 if __name__ == "__main__":
