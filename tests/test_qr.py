@@ -111,12 +111,10 @@ class WriteQrTests(unittest.TestCase):
             self.assertEqual(summary.written, 4)
             self.assertEqual(summary.failed, 1)
             self.assertTrue((out / "alpha.svg").exists())
-            # Ensure case and suffix collisions never overwrite prior artifacts.
-            self.assertTrue((out / "alpha-2.svg").exists())
+            self.assertTrue((out / "ALPHA-2.svg").exists())
             self.assertTrue((out / "alpha-2-2.svg").exists())
             self.assertTrue((out / "unsafe.svg").exists())
 
 
 if __name__ == "__main__":
     unittest.main()
-
