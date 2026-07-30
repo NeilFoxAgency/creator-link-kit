@@ -365,4 +365,3 @@ def audit_urls(urls: Iterable[str], convention: Convention) -> AuditResult:
 
     issues.extend(_campaign_id_consistency_issues(campaign_id_pairs))
     return AuditResult(checked=checked, issues=tuple(issues))
-
