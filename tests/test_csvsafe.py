@@ -1,8 +1,8 @@
 import csv
 import io
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from creator_link_kit.batch import batch_csv
 from creator_link_kit.config import convention_from_dict, starter_convention
@@ -22,10 +22,10 @@ class CsvSafetyTests(unittest.TestCase):
         self.assertIsNone(safe_cell(None))
 
     def test_safe_row_returns_a_copy(self):
-        source = {"name": "=HYPERLINK(\"https://example.com\")", "count": 1}
+        source = {"name": '=HYPERLINK("https://example.com")', "count": 1}
         result = safe_row(source)
-        self.assertEqual(result["name"], "'=HYPERLINK(\"https://example.com\")")
-        self.assertEqual(source["name"], "=HYPERLINK(\"https://example.com\")")
+        self.assertEqual(result["name"], '\'=HYPERLINK("https://example.com")')
+        self.assertEqual(source["name"], '=HYPERLINK("https://example.com")')
 
     def test_batch_csv_sanitizes_untrusted_roster_cells(self):
         convention = convention_from_dict(starter_convention())
