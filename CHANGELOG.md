@@ -2,9 +2,14 @@
 
 ## Unreleased
 
-- Added optional `clk qr` command to export SVG or PNG QR codes for campaign links. Install with `pip install 'creator-link-kit[qr]'`; generation is fully offline.
+- Added optional `clk qr` command for offline SVG/PNG QR export with safe filenames.
+- Added optional `utm_id` (GA4 campaign ID) governance with pattern validation and cross-link consistency checks (`CLK110` / `CLK111`).
 - Added optional HTML audit report (`clk audit --format html`) for offline client sharing with escaped dynamic content.
-- Added optional `utm_id` (GA4 campaign ID) governance: starter convention rule, pattern validation, and cross-link consistency checks during audit (`CLK110` / `CLK111`).
+- Added optional per-creator **discount code** generation during `clk batch`:
+  template expansion from roster columns, regex validation, case-insensitive
+  uniqueness, and a dedicated output column. Starter convention and examples
+  include a `{handle}15` pattern so agencies can mint unique codes alongside
+  governed UTM links offline.
 
 ## 0.1.0 - 2026-07-16
 

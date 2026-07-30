@@ -8,10 +8,13 @@ reaches your analytics.
 * `youtube` vs `YouTube` vs `yt` in the same campaign → three separate rows in GA4
 * one teammate's copy-pasted link with the wrong creator handle → silent mis-attribution
 * 30 creators × 3 placements each → 90 links nobody wants to build by hand
-* the same `utm_campaign` name paired with two different `utm_id` values → GA4 campaign ID reporting splits
+* shared or mistyped discount codes → attribution that cannot be joined back to a creator
 
 `creator-link-kit` (CLI: `clk`) catches all of this offline, in seconds, with
 zero dependencies and no data leaving your machine.
+
+The same `utm_campaign` paired with two different `utm_id` values splits GA4
+campaign ID reporting; audits enforce one-to-one campaign/ID consistency.
 
 ## What it does
 
@@ -19,7 +22,7 @@ zero dependencies and no data leaving your machine.
 | --- | --- |
 | `clk init` | Write a starter convention file you can edit in two minutes |
 | `clk build` | Build and validate a single campaign link |
-| `clk batch` | Generate one validated link per row of a creator roster CSV |
+| `clk batch` | Generate one validated link (and optional unique discount code) per roster row |
 | `clk audit` | Check shipped links (CSV or text export) against the convention |
 | `clk qr` | Export SVG/PNG QR codes for links (optional `[qr]` extra) |
 | `clk validate-config` | Sanity-check the convention file itself |
@@ -68,7 +71,7 @@ pip install -e ".[qr]"   # optional QR support
 # 1. Write a starter convention and edit sources, mediums, campaign pattern, base_url
 clk init creator-links.json
 
-# 2. Generate a validated link for every creator in your roster
+# 2. Generate a validated link (and unique discount code) for every creator in your roster
 clk batch --config creator-links.json --roster roster.csv --out links.csv
 
 # 3. Later, audit what actually shipped (export from your tracker, link-in-bio, GA4…)
@@ -91,7 +94,28 @@ labcoatlucie,Lucie Novak,youtube,https://shop.example.com/glowdrop?bundle=pro
 ```
 
 `clk batch` turns it into per-creator links that all follow the same
-convention - existing query params like `?bundle=pro` are preserved.
+convention - existing query params like `?bundle=pro` are preserved. When
+`batch.discount_code_template` is set, each row also receives a unique code:
+
+```csv
+handle,name,platform,landing_url,generated_url,discount_code,status,issues
+glowwithgreta,Greta Mohr,youtube,,https://shop.example.com/glowdrop?utm_source=youtube&utm_medium=influencer&utm_campaign=glowdrop-launch&utm_content=glowwithgreta,glowwithgreta15,ok,
+```
+
+And `clk audit` finds the real-world mess:
+
+```text
+  row 2: https://shop.example.com/glowdrop?utm_source=YouTube&utm_medium=...
+    ERROR  CLK105 ERROR: [utm_source] 'YouTube' only differs from an allowed value
+           by case; analytics tools treat these as different values (did you mean 'youtube'?)
+  row 4: https://shop.example.com/glowdrop?utm_source=tiktok&utm_campaign=...
+    ERROR  CLK102 ERROR: [utm_medium] required parameter is missing
+  Duplicate links:
+    ERROR  CLK005 ERROR: row 5 duplicates row 1: same destination and UTM values,
+           so reporting splits between rows
+
+  8 links checked: 3 clean, 3 error(s), 3 warning(s)
+```
 
 Try it on the included demo data:
 
@@ -101,7 +125,47 @@ clk audit --config examples/convention.json --input examples/live_links.csv
 clk audit --config examples/convention.json --input examples/live_links.csv --format html --out /tmp/audit.html
 ```
 
-Audit output formats are `text` (default), `json`, `csv`, and `html`; the HTML report is self-contained, offline, and escapes dynamic values.
+## Discount codes (optional)
+
+Creator campaigns almost always need **both** a unique UTM link and a unique
+promo code. Codes capture purchases when someone never clicks the tracked link
+(dark social, cross-device, typed brand search). The batch generator can mint
+codes from the same roster:
+
+```json
+"batch": {
+  "param_map": { "...": "..." },
+  "url_column": "landing_url",
+  "discount_code_template": "{handle}15",
+  "discount_code_pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{1,31}$",
+  "discount_code_column": "discount_code"
+}
+```
+
+| Key | Meaning |
+| --- | --- |
+| `discount_code_template` | String template using roster columns (same `{column}` syntax as `param_map`) |
+| `discount_code_pattern` | Optional regex every generated code must match |
+| `discount_code_column` | Output CSV column name (default `discount_code`) |
+
+Rules enforced during `clk batch`:
+
+* Codes are unique within the batch (**case-insensitive** — `GRETA15` collides with `greta15`)
+* Empty expansions and pattern failures mark that row as `error` without stopping the rest of the roster
+* Omit `discount_code_template` entirely to leave codes out of the pipeline
+
+Codes are never sent to any network service. Create them in Shopify (or your
+store) from the CSV; this tool only governs naming and uniqueness offline.
+
+## HTML audit reports
+
+Use the self-contained HTML format when sharing an audit with a client:
+
+```bash
+clk audit --config examples/convention.json --input examples/live_links.csv --format html --out /tmp/audit.html
+```
+
+Audit output formats are `text` (default), `json`, `csv`, and `html`; the HTML report is offline and escapes dynamic values.
 
 ## QR code export
 
@@ -143,9 +207,11 @@ clk qr --url 'https://shop.example.com/glowdrop?utm_source=youtube&utm_medium=in
       "utm_medium": "influencer",
       "utm_campaign": "glowdrop-launch",
       "utm_content": "{handle}",
-      "utm_id": "cmp_glowdrop_launch"
+      "utm_id": "cmp_product_launch"
     },
-    "url_column": "landing_url"
+    "url_column": "landing_url",
+    "discount_code_template": "{handle}15",
+    "discount_code_pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{1,31}$"
   }
 }
 ```
@@ -153,26 +219,23 @@ clk qr --url 'https://shop.example.com/glowdrop?utm_source=youtube&utm_medium=in
 | Key | Meaning |
 | --- | --- |
 | `base_url` | Default destination when a roster row has no URL of its own |
-| `owned_domains` | Your properties. Audit warns when a tagged link points anywhere else |
+| `owned_domains` | Your properties. Audit warns when a tagged link points anywhere else (typo, expired redirect, wrong property) |
 | `casing` | `lowercase` (recommended) or `any` |
 | `max_value_length` | Per-value character limit |
 | `required` | Parameters every link must carry |
 | `parameters` | Per-parameter rules: `allowed` (exact list) and/or `pattern` (regex) |
-| `defaults` | Values pre-filled by `build`/`batch` |
+| `defaults` | Values pre-filled by `build`/`batch` (e.g. medium is always `influencer`) |
 | `batch.param_map` | Templates per parameter; `{column}` pulls from the roster CSV |
 | `batch.url_column` | Roster column holding a per-row landing URL (optional) |
+| `batch.discount_code_*` | Optional unique promo-code generation (see above) |
 
 YAML works too: name the file `*.yaml` and install the `[yaml]` extra.
 
 ### GA4 `utm_id` (campaign ID)
 
-`utm_id` is optional unless you add it to `required`. When present:
-
-* Values are validated against the `utm_id` rule in your convention (the starter uses a permissive alphanumeric pattern suitable for GA4 campaign IDs).
-* `clk batch` can stamp a stable ID for an entire campaign by setting a constant in `batch.param_map` (as in the starter: `"utm_id": "cmp_product_launch"`).
-* `clk audit` checks **cross-link consistency**: the same `utm_campaign` must not appear with two different `utm_id` values, and the same `utm_id` must not label two different campaigns (`CLK110` / `CLK111`). Rows without both parameters are ignored for this check.
-
-This mirrors how GA4 uses campaign ID as a stable join key independent of the human-readable campaign name.
+`utm_id` is optional unless you add it to `required`. Audits enforce that one
+campaign name maps to one ID and one ID maps to one campaign name (`CLK110` /
+`CLK111`). Customize the starter value in `batch.param_map` for each campaign.
 
 ## Rule codes
 
@@ -218,16 +281,8 @@ Example: block merging a campaign tracker update that breaks the convention.
 ## Privacy
 
 The tool is fully offline: no network calls, no analytics, no telemetry, no
-link-shortener APIs. Your creator roster and campaign URLs never leave your
-machine. See `SECURITY.md`.
-
-## HTML audit reports
-
-Use the self-contained HTML format when sharing an audit with a client:
-
-```bash
-clk audit --config examples/convention.json --input examples/live_links.csv --format html --out /tmp/audit.html
-```
+link-shortener APIs. Your creator roster, campaign URLs, and discount codes
+never leave your machine. See `SECURITY.md`.
 
 ## Roadmap
 

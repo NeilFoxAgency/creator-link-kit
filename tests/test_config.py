@@ -16,6 +16,7 @@ class ConfigTests(unittest.TestCase):
         convention = convention_from_dict(starter_convention())
         self.assertEqual(convention.version, 1)
         self.assertEqual(convention.defaults["utm_medium"], "influencer")
+        self.assertEqual(convention.batch.discount_code_template, "{handle}15")
 
     def test_rejects_wrong_version(self):
         raw = starter_convention()
@@ -33,6 +34,18 @@ class ConfigTests(unittest.TestCase):
         raw = starter_convention()
         raw["required"].append("utm_term")
         with self.assertRaisesRegex(ConfigError, "need rules"):
+            convention_from_dict(raw)
+
+    def test_rejects_bad_discount_pattern(self):
+        raw = starter_convention()
+        raw["batch"]["discount_code_pattern"] = "["
+        with self.assertRaisesRegex(ConfigError, "discount_code_pattern"):
+            convention_from_dict(raw)
+
+    def test_rejects_reserved_discount_column(self):
+        raw = starter_convention()
+        raw["batch"]["discount_code_column"] = "status"
+        with self.assertRaisesRegex(ConfigError, "reserved output column"):
             convention_from_dict(raw)
 
     def test_load_json(self):

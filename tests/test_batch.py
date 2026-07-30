@@ -19,6 +19,7 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(summary.ok, 1)
         self.assertEqual(rows[0]["status"], "ok")
         self.assertIn("utm_content=greta", rows[0]["generated_url"])
+        self.assertEqual(rows[0]["discount_code"], "greta15")
 
     def test_row_error_is_isolated(self):
         rows, summary = generate_rows(
@@ -57,6 +58,45 @@ class BatchTests(unittest.TestCase):
             with destination.open(newline="", encoding="utf-8") as handle:
                 row = next(csv.DictReader(handle))
             self.assertEqual(row["status"], "ok")
+            self.assertEqual(row["discount_code"], "greta15")
+
+    def test_duplicate_discount_codes_fail(self):
+        # Same handle twice: UTM content differs by platform but discount template
+        # only uses handle, so codes collide (case-insensitive).
+        rows, summary = generate_rows(
+            [
+                {"handle": "greta", "platform": "youtube", "landing_url": ""},
+                {"handle": "greta", "platform": "instagram", "landing_url": ""},
+            ],
+            self.convention,
+        )
+        self.assertEqual(summary.ok, 1)
+        self.assertEqual(summary.failed, 1)
+        self.assertIn("duplicates", rows[1]["issues"])
+
+    def test_pattern_rejects_bad_code(self):
+        raw = starter_convention()
+        raw["batch"]["discount_code_template"] = "x"
+        convention = convention_from_dict(raw)
+        rows, summary = generate_rows(
+            [{"handle": "greta", "platform": "youtube", "landing_url": ""}],
+            convention,
+        )
+        self.assertEqual(summary.failed, 1)
+        self.assertIn("does not match pattern", rows[0]["issues"])
+
+    def test_codes_optional_when_template_absent(self):
+        raw = starter_convention()
+        del raw["batch"]["discount_code_template"]
+        del raw["batch"]["discount_code_pattern"]
+        del raw["batch"]["discount_code_column"]
+        convention = convention_from_dict(raw)
+        rows, summary = generate_rows(
+            [{"handle": "greta", "platform": "youtube", "landing_url": ""}],
+            convention,
+        )
+        self.assertEqual(summary.ok, 1)
+        self.assertNotIn("discount_code", rows[0])
 
 
 if __name__ == "__main__":
