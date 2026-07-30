@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added optional `clk qr` command for offline SVG/PNG QR export with safe filenames.
 - Added optional `utm_id` (GA4 campaign ID) governance with pattern validation and cross-link consistency checks (`CLK110` / `CLK111`).
 - Added optional HTML audit report (`clk audit --format html`) for offline client sharing with escaped dynamic content.
 - Added optional per-creator **discount code** generation during `clk batch`:

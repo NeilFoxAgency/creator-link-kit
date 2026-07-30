@@ -24,6 +24,7 @@ campaign ID reporting; audits enforce one-to-one campaign/ID consistency.
 | `clk build` | Build and validate a single campaign link |
 | `clk batch` | Generate one validated link (and optional unique discount code) per roster row |
 | `clk audit` | Check shipped links (CSV or text export) against the convention |
+| `clk qr` | Export SVG/PNG QR codes for links (optional `[qr]` extra) |
 | `clk validate-config` | Sanity-check the convention file itself |
 
 Everything is driven by one small JSON (or YAML) convention file that lives in
@@ -52,6 +53,7 @@ Requires Python 3.10+. No required dependencies.
 ```bash
 pip install creator-link-kit          # once published to PyPI
 pip install creator-link-kit[yaml]    # optional: YAML convention files
+pip install creator-link-kit[qr]      # optional: QR code export (segno)
 ```
 
 Or run from a clone:
@@ -60,6 +62,7 @@ Or run from a clone:
 git clone https://github.com/NeilFoxAgency/creator-link-kit
 cd creator-link-kit
 pip install -e .
+pip install -e ".[qr]"   # optional QR support
 ```
 
 ## Quickstart
@@ -76,6 +79,9 @@ clk audit --config creator-links.json --input live_links.csv
 
 # Optional: share a readable offline HTML report with a client
 clk audit --config creator-links.json --input live_links.csv --format html --out audit-report.html
+
+# Optional: QR codes for YouTube end screens or packaging inserts
+clk qr --input links.csv --out-dir qr-codes --format svg
 ```
 
 A roster row is just CSV:
@@ -160,6 +166,22 @@ clk audit --config examples/convention.json --input examples/live_links.csv --fo
 ```
 
 Audit output formats are `text` (default), `json`, `csv`, and `html`; the HTML report is offline and escapes dynamic values.
+
+## QR code export
+
+After `clk batch`, export scannable codes for creators who need physical or
+on-screen placements:
+
+```bash
+pip install 'creator-link-kit[qr]'
+clk qr --input links.csv --out-dir qr-codes --format svg
+clk qr --url 'https://shop.example.com/glowdrop?utm_source=youtube&utm_medium=influencer&utm_campaign=glowdrop-launch&utm_content=glowwithgreta' --out-dir qr-codes
+```
+
+- File names prefer the `handle` / `name` / `creator` column when present.
+- Default format is SVG (vector, print-friendly). PNG is available via `--format png`.
+- Error correction defaults to medium (`--error m`); raise to `h` for dense print.
+- Fully offline: no network calls, no telemetry, no link shortener APIs.
 
 ## The convention file
 
@@ -264,7 +286,6 @@ never leave your machine. See `SECURITY.md`.
 
 ## Roadmap
 
-* QR code export for YouTube end screens and packaging inserts
 * A GitHub Action wrapper for one-line CI audits
 
 Ideas and use cases welcome - see `CONTRIBUTING.md`.
