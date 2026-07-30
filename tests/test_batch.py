@@ -1,7 +1,7 @@
 import csv
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from creator_link_kit.batch import batch_csv, generate_rows
 from creator_link_kit.config import convention_from_dict, starter_convention
@@ -34,11 +34,13 @@ class BatchTests(unittest.TestCase):
 
     def test_per_row_url(self):
         rows, _ = generate_rows(
-            [{
-                "handle": "greta",
-                "platform": "youtube",
-                "landing_url": "https://shop.example.com/special?bundle=pro",
-            }],
+            [
+                {
+                    "handle": "greta",
+                    "platform": "youtube",
+                    "landing_url": "https://shop.example.com/special?bundle=pro",
+                }
+            ],
             self.convention,
         )
         self.assertIn("/special?bundle=pro", rows[0]["generated_url"])
