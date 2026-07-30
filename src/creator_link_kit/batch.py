@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import csv
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from string import Formatter
-from typing import Iterable
 
 from .config import Convention
 from .links import build_url
@@ -22,9 +22,7 @@ class BatchSummary:
 
 def _template_fields(template: str) -> set[str]:
     return {
-        field_name
-        for _, field_name, _, _ in Formatter().parse(template)
-        if field_name
+        field_name for _, field_name, _, _ in Formatter().parse(template) if field_name
     }
 
 
@@ -46,9 +44,7 @@ def _render_discount_code(row: dict[str, str], convention: Convention) -> str | 
         )
     pattern = convention.batch.discount_code_pattern
     if pattern and re.fullmatch(pattern, code) is None:
-        raise ValueError(
-            f"discount code {code!r} does not match pattern {pattern!r}"
-        )
+        raise ValueError(f"discount code {code!r} does not match pattern {pattern!r}")
     return code
 
 
@@ -125,7 +121,9 @@ def batch_csv(
         destination = Path(output_path)
         destination.parent.mkdir(parents=True, exist_ok=True)
         with destination.open("w", newline="", encoding="utf-8") as handle:
-            writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+            writer = csv.DictWriter(
+                handle, fieldnames=fieldnames, extrasaction="ignore"
+            )
             writer.writeheader()
             writer.writerows(rows)
     return rows, summary
