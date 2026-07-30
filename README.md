@@ -205,7 +205,7 @@ same convention without hand-writing install and CLI steps.
   with:
     config: creator-links.json
     input: data/live_links.csv
-    format: text          # text | json | csv
+    format: text          # text | json | csv | html
     strict: "true"        # optional; treat warnings as errors
     # url-column: generated_url   # optional when auto-detect fails
 ```
@@ -217,7 +217,7 @@ Inputs:
 | `config` | yes | — | Path to the convention file |
 | `input` | yes | — | CSV or text file of links to audit |
 | `url-column` | no | auto | CSV column that holds the URL |
-| `format` | no | `text` | Report format (`text`, `json`, `csv`) |
+| `format` | no | `text` | Report format (`text`, `json`, `csv`, `html`) |
 | `strict` | no | `false` | Treat warnings as errors |
 | `python-version` | no | `3.12` | Python runtime for the action |
 | `version` | no | local/action tree or latest | Pin a PyPI version, or `local` to install the action's own tree |
