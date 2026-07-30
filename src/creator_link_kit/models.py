@@ -67,7 +67,7 @@ class LinkIdentifiers:
         values: Mapping[str, Any],
         *,
         columns: Mapping[str, str] | None = None,
-    ) -> "LinkIdentifiers":
+    ) -> LinkIdentifiers:
         """Read only the four approved identifier fields from a row mapping.
 
         Unrelated columns are deliberately ignored so link specifications never
@@ -113,7 +113,7 @@ class AuditIssue:
     url: str | None = None
 
     @classmethod
-    def from_issue(cls, issue: Any) -> "AuditIssue":
+    def from_issue(cls, issue: Any) -> AuditIssue:
         return cls(
             code=issue.code,
             severity=issue.severity,
@@ -248,7 +248,7 @@ class LinkProvisionRequest:
         *,
         slug: str | None = None,
         tags: tuple[str, ...] = (),
-    ) -> "LinkProvisionRequest":
+    ) -> LinkProvisionRequest:
         if not specification.audit.valid:
             raise ValueError("cannot provision a link specification with audit errors")
         if specification.identifiers.placement_id is None:
