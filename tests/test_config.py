@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import tempfile
 import unittest
@@ -5,6 +6,7 @@ from pathlib import Path
 
 from creator_link_kit.config import (
     ConfigError,
+    convention_fingerprint,
     convention_from_dict,
     load_convention,
     starter_convention,
@@ -60,6 +62,19 @@ class ConfigTests(unittest.TestCase):
         with self.assertRaisesRegex(ConfigError, "base_url"):
             convention_from_dict(raw)
 
+    def test_domain_matching_normalizes_case_and_trailing_dots(self):
+        raw = starter_convention()
+        raw["base_url"] = "https://SHOP.Example.COM./product"
+        raw["owned_domains"] = ["Example.COM."]
+        convention = convention_from_dict(raw)
+        self.assertEqual(convention.owned_domains, ("example.com",))
+
+    def test_rejects_non_hostname_owned_domain(self):
+        raw = starter_convention()
+        raw["owned_domains"] = ["https://example.com/path"]
+        with self.assertRaisesRegex(ConfigError, "hostname"):
+            convention_from_dict(raw)
+
     def test_rejects_unknown_identifier_column(self):
         raw = starter_convention()
         raw["batch"]["id_columns"]["order_id"] = "order_id"
@@ -103,6 +118,29 @@ class ConfigTests(unittest.TestCase):
         convention = convention_from_dict(raw)
         self.assertEqual(convention.mode, "development")
         self.assertEqual(convention.batch.id_columns, {})
+
+    def test_configuration_fingerprint_is_stable_and_policy_sensitive(self):
+        first = convention_from_dict(starter_convention())
+        second = convention_from_dict(starter_convention())
+        changed_raw = starter_convention()
+        changed_raw["mode"] = "development"
+        changed = convention_from_dict(changed_raw)
+        self.assertEqual(convention_fingerprint(first), convention_fingerprint(second))
+        self.assertNotEqual(
+            convention_fingerprint(first), convention_fingerprint(changed)
+        )
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("yaml") is not None,
+        "PyYAML optional dependency is not installed",
+    )
+    def test_yaml_extra_loads_with_real_dependency(self):
+        import yaml
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "config.yaml"
+            path.write_text(yaml.safe_dump(starter_convention()), encoding="utf-8")
+            self.assertEqual(load_convention(path).version, 1)
 
     def test_load_json(self):
         with tempfile.TemporaryDirectory() as tmp:

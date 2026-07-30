@@ -100,6 +100,23 @@ class LinkTests(unittest.TestCase):
         )
         self.assertNotIn("CLK003", {issue.code for issue in issues})
 
+    def test_exact_owned_domain_is_owned(self):
+        issues = validate_url(self.tagged_url(host="example.com"), self.convention)
+        self.assertNotIn("CLK003", {issue.code for issue in issues})
+
+    def test_uppercase_and_trailing_dot_hostnames_are_owned(self):
+        for host in ("SHOP.EXAMPLE.COM", "shop.example.com."):
+            with self.subTest(host=host):
+                issues = validate_url(self.tagged_url(host=host), self.convention)
+                self.assertNotIn("CLK003", {issue.code for issue in issues})
+
+    def test_deceptive_suffix_domains_are_external(self):
+        for host in ("example.com.evil.net", "notexample.com"):
+            with self.subTest(host=host):
+                issues = validate_url(self.tagged_url(host=host), self.convention)
+                issue = next(item for item in issues if item.code == "CLK003")
+                self.assertEqual(issue.severity, "error")
+
     def test_invalid_port_is_a_parse_error(self):
         url = self.tagged_url().replace(
             "shop.example.com", "shop.example.com:not-a-port", 1

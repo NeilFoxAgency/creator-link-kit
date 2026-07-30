@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
@@ -69,6 +70,21 @@ class JobBuilderTests(unittest.TestCase):
 
 
 class WriteQrTests(unittest.TestCase):
+    @unittest.skipUnless(
+        importlib.util.find_spec("segno") is not None,
+        "segno optional dependency is not installed",
+    )
+    def test_write_with_real_segno_dependency(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            summary = write_qr_codes(
+                [QrJob("https://example.com/placement", "plc-real-01")],
+                out,
+                fmt="svg",
+            )
+            self.assertEqual(summary.written, 1)
+            self.assertTrue((out / "plc-real-01.svg").read_text(encoding="utf-8"))
+
     def test_missing_dependency(self):
         import creator_link_kit.qr as qr_mod
 

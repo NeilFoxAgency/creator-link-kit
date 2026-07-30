@@ -31,6 +31,47 @@ class SpecificationTests(unittest.TestCase):
         )
         request = LinkProvisionRequest.from_specification(specification)
         self.assertEqual(request.destination_url, specification.generated_destination)
+        self.assertRegex(specification.config_fingerprint or "", r"^[0-9a-f]{64}$")
+        self.assertEqual(
+            specification.as_dict()["config_fingerprint"],
+            specification.config_fingerprint,
+        )
+
+    def test_utm_content_alone_is_not_a_placement_id(self):
+        specification = build_link_specification(
+            "https://shop.example.com/product",
+            {
+                "utm_source": "youtube",
+                "utm_campaign": "cmp-summer-launch",
+                "utm_id": "cmp-summer-launch",
+                "utm_content": "glowwithgreta",
+            },
+            self.convention,
+        )
+        self.assertIsNone(specification.identifiers.placement_id)
+        self.assertEqual(specification.audit.errors, ())
+
+    def test_development_warning_is_valid_and_can_be_provisioned(self):
+        raw = starter_convention()
+        raw["mode"] = "development"
+        convention = convention_from_dict(raw)
+        specification = build_link_specification(
+            "https://example.net/product",
+            {
+                "utm_source": "youtube",
+                "utm_campaign": "cmp-summer-launch",
+                "utm_id": "cmp-summer-launch",
+                "utm_content": "plc-summer-01",
+            },
+            convention,
+            identifiers=LinkIdentifiers(
+                campaign_id="cmp-summer-launch",
+                placement_id="plc-summer-01",
+            ),
+        )
+        self.assertTrue(specification.audit.valid)
+        self.assertGreater(len(specification.audit.warnings), 0)
+        self.assertIsNotNone(LinkProvisionRequest.from_specification(specification))
 
     def test_mismatched_campaign_identifier_is_rejected(self):
         identifiers = LinkIdentifiers(campaign_id="cmp-one")

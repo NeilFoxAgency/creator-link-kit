@@ -74,6 +74,93 @@ class BatchTests(unittest.TestCase):
         self.assertTrue(all(row["status"] == "error" for row in rows))
         self.assertTrue(all("duplicated within batch" in row["issues"] for row in rows))
 
+    def test_duplicate_detection_uses_custom_placement_column(self):
+        raw = starter_convention()
+        raw["batch"]["id_columns"] = {
+            "brand_id": "brand_key",
+            "campaign_id": "campaign_key",
+            "creator_id": "creator_key",
+            "placement_id": "asset_key",
+        }
+        raw["batch"]["param_map"].update(
+            {
+                "utm_campaign": "{campaign_key}",
+                "utm_id": "{campaign_key}",
+                "utm_content": "{asset_key}",
+            }
+        )
+        convention = convention_from_dict(raw)
+        rows, summary = generate_rows(
+            [
+                {
+                    "brand_key": "brd-glowdrop",
+                    "campaign_key": "cmp-glowdrop-launch",
+                    "creator_key": "crt-greta",
+                    "asset_key": "plc-duplicate",
+                    "platform": "youtube",
+                },
+                {
+                    "brand_key": "brd-glowdrop",
+                    "campaign_key": "cmp-glowdrop-launch",
+                    "creator_key": "crt-priya",
+                    "asset_key": "plc-duplicate",
+                    "platform": "youtube",
+                },
+            ],
+            convention,
+        )
+        self.assertEqual(summary.failed, 2)
+        self.assertTrue(all("asset_key" in row["issues"] for row in rows))
+
+    def test_roster_without_optional_id_columns_is_supported(self):
+        raw = starter_convention()
+        raw["batch"].pop("id_columns")
+        raw["batch"].pop("discount_code_template")
+        raw["batch"].pop("discount_code_pattern")
+        raw["batch"].pop("discount_code_column")
+        raw["batch"]["param_map"].update(
+            {
+                "utm_campaign": "cmp-legacy-shaped",
+                "utm_id": "cmp-legacy-shaped",
+                "utm_content": "{handle}",
+            }
+        )
+        convention = convention_from_dict(raw)
+        rows, summary = generate_rows(
+            [{"handle": "greta", "platform": "youtube"}], convention
+        )
+        self.assertEqual(summary.ok, 1)
+        payload = json.loads(rows[0]["link_spec"])
+        self.assertIsNone(payload["ids"]["brand_id"])
+        self.assertIsNone(payload["ids"]["creator_id"])
+        self.assertIsNone(payload["ids"]["placement_id"])
+
+    def test_empty_present_placement_id_fails(self):
+        rows, summary = generate_rows([self.row("")], self.convention)
+        self.assertEqual(summary.failed, 1)
+        self.assertIn("placement_id must be non-empty", rows[0]["issues"])
+
+    def test_external_per_row_destination_fails_in_production(self):
+        rows, summary = generate_rows(
+            [self.row("plc-external", landing_url="https://example.net/product")],
+            self.convention,
+        )
+        self.assertEqual(summary.failed, 1)
+        self.assertIn("outside owned_domains", rows[0]["issues"])
+
+    def test_external_per_row_destination_warns_in_development(self):
+        raw = starter_convention()
+        raw["mode"] = "development"
+        convention = convention_from_dict(raw)
+        rows, summary = generate_rows(
+            [self.row("plc-external", landing_url="https://example.net/product")],
+            convention,
+        )
+        self.assertEqual(summary.ok, 1)
+        payload = json.loads(rows[0]["link_spec"])
+        self.assertTrue(payload["audit"]["valid"])
+        self.assertGreater(payload["audit"]["warnings"], 0)
+
     def test_multiple_placements_for_same_creator_are_allowed(self):
         rows, summary = generate_rows(
             [
@@ -181,6 +268,28 @@ class BatchTests(unittest.TestCase):
                 for line in spec_destination.read_text(encoding="utf-8").splitlines()
             ]
             self.assertEqual(specs[0]["ids"]["placement_id"], "plc-greta-video-01")
+
+    def test_jsonl_contains_only_valid_specs_for_mixed_batch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "roster.csv"
+            specs_path = Path(tmp) / "links.jsonl"
+            source.write_text(
+                "brand_id,campaign_id,creator_id,placement_id,handle,platform\n"
+                "brd-glowdrop,cmp-glowdrop-launch,crt-greta,plc-good,greta,youtube\n"
+                "brd-glowdrop,cmp-glowdrop-launch,crt-greta,plc-bad,greta,YouTube\n",
+                encoding="utf-8",
+            )
+            _, summary = batch_csv(
+                source,
+                None,
+                self.convention,
+                spec_output_path=specs_path,
+            )
+            specs = specs_path.read_text(encoding="utf-8").splitlines()
+        self.assertEqual(summary.ok, 1)
+        self.assertEqual(summary.failed, 1)
+        self.assertEqual(len(specs), 1)
+        self.assertEqual(json.loads(specs[0])["ids"]["placement_id"], "plc-good")
 
 
 if __name__ == "__main__":
