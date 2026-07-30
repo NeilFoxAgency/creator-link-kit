@@ -2,12 +2,7 @@
 
 ## Unreleased
 
-- Added a reusable composite GitHub Action (`action.yml`) for one-line CI audits
-  of shipped creator links against a convention file.
-- Documented Action inputs and usage in the README; marked the related roadmap
-  item complete.
-- Added `.github/workflows/example-audit.yml` as a copy-paste starting point for
-  downstream projects.
+- Reject links with invalid ports or embedded URL credentials during build and audit.
 
 ## 0.1.0 - 2026-07-16
 
