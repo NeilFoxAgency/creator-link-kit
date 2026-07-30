@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import json
-from pathlib import Path
 import re
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -27,6 +27,9 @@ class BatchConfig:
     discount_code_template: str | None = None
     discount_code_pattern: str | None = None
     discount_code_column: str = "discount_code"
+
+
+_BATCH_OUTPUT_COLUMNS = frozenset({"generated_url", "status", "issues"})
 
 
 @dataclass(frozen=True)
@@ -127,7 +130,9 @@ def convention_from_dict(raw: dict[str, Any]) -> Convention:
             try:
                 re.compile(pattern)
             except re.error as exc:
-                raise ConfigError(f"parameters.{key}.pattern is invalid: {exc}") from exc
+                raise ConfigError(
+                    f"parameters.{key}.pattern is invalid: {exc}"
+                ) from exc
         parameters[key] = ParameterRule(tuple(allowed_raw), pattern)
 
     required_raw = raw.get("required", [])
@@ -166,7 +171,10 @@ def convention_from_dict(raw: dict[str, Any]) -> Convention:
 
     discount_code_template = batch_raw.get("discount_code_template")
     if discount_code_template is not None:
-        if not isinstance(discount_code_template, str) or not discount_code_template.strip():
+        if (
+            not isinstance(discount_code_template, str)
+            or not discount_code_template.strip()
+        ):
             raise ConfigError("batch.discount_code_template must be a non-empty string")
         discount_code_template = discount_code_template.strip()
 
@@ -183,6 +191,11 @@ def convention_from_dict(raw: dict[str, Any]) -> Convention:
     if not isinstance(discount_code_column, str) or not discount_code_column.strip():
         raise ConfigError("batch.discount_code_column must be a non-empty string")
     discount_code_column = discount_code_column.strip()
+    if discount_code_column in _BATCH_OUTPUT_COLUMNS:
+        raise ConfigError(
+            "batch.discount_code_column cannot replace a reserved output column: "
+            + discount_code_column
+        )
 
     convention = Convention(
         version=version,
@@ -226,9 +239,7 @@ def starter_convention() -> dict[str, Any]:
         "max_value_length": 80,
         "required": ["utm_source", "utm_medium", "utm_campaign"],
         "parameters": {
-            "utm_source": {
-                "allowed": ["youtube", "instagram", "tiktok", "newsletter"]
-            },
+            "utm_source": {"allowed": ["youtube", "instagram", "tiktok", "newsletter"]},
             "utm_medium": {"allowed": ["influencer", "social", "email", "cpc"]},
             "utm_campaign": {"pattern": "^[a-z0-9][a-z0-9-]{2,48}$"},
             "utm_content": {"pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"},
