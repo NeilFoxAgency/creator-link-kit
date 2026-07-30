@@ -1,0 +1,24 @@
+# Example workflow showing how consumers can call the reusable action.
+# This workflow is documentation-only for downstream projects; the package
+# CI remains in ci.yml.
+name: Example Creator Link Audit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Audit example links
+        uses: NeilFoxAgency/creator-link-kit@main
+        with:
+          config: examples/convention.json
+          input: examples/live_links.csv
+          format: text
+          strict: "false"
