@@ -217,7 +217,7 @@ def main(argv: list[str] | None = None) -> int:
                 brand_id=args.brand_id,
                 campaign_id=args.campaign_id or params.get("utm_id"),
                 creator_id=args.creator_id,
-                placement_id=args.placement_id or params.get("utm_content"),
+                placement_id=args.placement_id,
             )
             specification = build_link_specification(
                 args.url or convention.base_url,

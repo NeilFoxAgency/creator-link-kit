@@ -7,9 +7,10 @@ from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from difflib import get_close_matches
-from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from .config import Convention
+from .config import Convention, domain_is_owned
+from .urls import authority_error as _authority_error
 
 
 @dataclass(frozen=True)
@@ -59,23 +60,6 @@ class AuditResult:
     def clean(self) -> int:
         bad_rows = {issue.row for issue in self.issues if issue.row is not None}
         return max(0, self.checked - len(bad_rows))
-
-
-def _domain_is_owned(host: str, owned_domains: tuple[str, ...]) -> bool:
-    host = host.lower().rstrip(".")
-    return any(
-        host == domain or host.endswith("." + domain) for domain in owned_domains
-    )
-
-
-def _authority_error(parsed: SplitResult) -> str | None:
-    if parsed.username is not None or parsed.password is not None:
-        return "URL must not include embedded credentials"
-    try:
-        _ = parsed.port
-    except ValueError as exc:
-        return f"URL has an invalid port: {exc}"
-    return None
 
 
 def validate_params(
@@ -181,7 +165,7 @@ def validate_url(url: str, convention: Convention) -> list[Issue]:
         return [Issue("CLK001", "error", authority_error, url=url)]
     if parsed.scheme == "http":
         issues.append(Issue("CLK002", "warning", "URL uses http instead of https"))
-    if convention.owned_domains and not _domain_is_owned(
+    if convention.owned_domains and not domain_is_owned(
         parsed.hostname or "", convention.owned_domains
     ):
         severity = "error" if convention.mode == "production" else "warning"

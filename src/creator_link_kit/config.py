@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass, field
@@ -10,6 +11,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from .models import IDENTIFIER_FIELDS
+from .urls import authority_error
 
 
 class ConfigError(ValueError):
@@ -65,7 +67,27 @@ def _expect_string(value: Any, label: str) -> str:
     return value.strip()
 
 
-def _domain_is_owned(host: str, owned_domains: tuple[str, ...]) -> bool:
+def _normalize_owned_domain(value: str) -> str:
+    normalized = value.strip().lower().lstrip(".").rstrip(".")
+    if not normalized:
+        raise ValueError("domain must contain a hostname")
+    try:
+        parsed = urlsplit("//" + normalized)
+    except ValueError as exc:
+        raise ValueError(f"domain cannot be parsed: {exc}") from exc
+    if (
+        authority_error(parsed) is not None
+        or parsed.path
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError("domain must be a hostname without credentials, port, or path")
+    if parsed.hostname is None or parsed.hostname.rstrip(".").lower() != normalized:
+        raise ValueError("domain must be a valid hostname")
+    return normalized
+
+
+def domain_is_owned(host: str, owned_domains: tuple[str, ...]) -> bool:
     normalized = host.lower().rstrip(".")
     return any(
         normalized == domain or normalized.endswith("." + domain)
@@ -89,7 +111,7 @@ def _load_raw(path: Path) -> dict[str, Any]:
             ) from exc
         try:
             raw = yaml.safe_load(text)
-        except Exception as exc:
+        except yaml.YAMLError as exc:
             raise ConfigError(f"invalid YAML: {exc}") from exc
     else:
         try:
@@ -113,29 +135,29 @@ def convention_from_dict(raw: dict[str, Any]) -> Convention:
         raise ConfigError(f"base_url cannot be parsed: {exc}") from exc
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ConfigError("base_url must be an absolute http or https URL")
-    if parsed.username is not None or parsed.password is not None:
-        raise ConfigError("base_url must not include embedded credentials")
-    try:
-        _ = parsed.port
-    except ValueError as exc:
-        raise ConfigError(f"base_url has an invalid port: {exc}") from exc
+    base_authority_error = authority_error(parsed)
+    if base_authority_error is not None:
+        raise ConfigError(f"base_url{base_authority_error.removeprefix('URL')}")
 
     owned_raw = raw.get("owned_domains", [])
     if not isinstance(owned_raw, list) or not all(
         isinstance(item, str) and item.strip() for item in owned_raw
     ):
         raise ConfigError("owned_domains must be a list of non-empty strings")
-    owned_domains = tuple(item.lower().strip().lstrip(".") for item in owned_raw)
+    try:
+        owned_domains = tuple(_normalize_owned_domain(item) for item in owned_raw)
+    except ValueError as exc:
+        raise ConfigError(f"owned_domains contains an invalid domain: {exc}") from exc
     if len(set(owned_domains)) != len(owned_domains):
         raise ConfigError("owned_domains contains duplicates")
 
     mode = raw.get("mode", "development")
-    if mode not in {"development", "production"}:
+    if not isinstance(mode, str) or mode not in {"development", "production"}:
         raise ConfigError("mode must be 'development' or 'production'")
     if mode == "production":
         if not owned_domains:
             raise ConfigError("production mode requires at least one owned domain")
-        if not _domain_is_owned(parsed.hostname or "", owned_domains):
+        if not domain_is_owned(parsed.hostname or "", owned_domains):
             raise ConfigError("production base_url must use an owned domain")
 
     casing = raw.get("casing", "lowercase")
@@ -285,6 +307,44 @@ def convention_from_dict(raw: dict[str, Any]) -> Convention:
     if errors:
         raise ConfigError("invalid defaults: " + "; ".join(i.message for i in errors))
     return convention
+
+
+def convention_fingerprint(convention: Convention) -> str:
+    """Return a deterministic SHA-256 identifier for a normalized convention.
+
+    The digest identifies the policy used to generate a specification. It is
+    not a signature and contains no credentials or raw roster data.
+    """
+
+    payload = {
+        "version": convention.version,
+        "base_url": convention.base_url,
+        "owned_domains": list(convention.owned_domains),
+        "mode": convention.mode,
+        "casing": convention.casing,
+        "max_value_length": convention.max_value_length,
+        "required": list(convention.required),
+        "parameters": {
+            key: {"allowed": list(rule.allowed), "pattern": rule.pattern}
+            for key, rule in convention.parameters.items()
+        },
+        "defaults": dict(convention.defaults),
+        "batch": {
+            "param_map": dict(convention.batch.param_map),
+            "url_column": convention.batch.url_column,
+            "id_columns": dict(convention.batch.id_columns),
+            "discount_code_template": convention.batch.discount_code_template,
+            "discount_code_pattern": convention.batch.discount_code_pattern,
+            "discount_code_column": convention.batch.discount_code_column,
+        },
+    }
+    canonical = json.dumps(
+        payload,
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 
 def load_convention(path: str | Path) -> Convention:

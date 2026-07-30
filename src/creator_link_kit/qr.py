@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from .urls import authority_error
+
 
 class QrDependencyError(RuntimeError):
     """Raised when the optional QR dependency is not installed."""
@@ -164,12 +166,9 @@ def write_qr_codes(
             parsed = urlsplit(job.url)
             if parsed.scheme.lower() not in {"http", "https"} or not parsed.netloc:
                 raise ValueError("URL must be absolute http or https")
-            if parsed.username is not None or parsed.password is not None:
-                raise ValueError("URL must not include embedded credentials")
-            try:
-                _ = parsed.port
-            except ValueError as exc:
-                raise ValueError("URL has an invalid port") from exc
+            authority_issue = authority_error(parsed)
+            if authority_issue is not None:
+                raise ValueError(authority_issue)
             qr = segno.make(job.url, error=error)
             if fmt == "svg":
                 qr.save(str(destination), scale=scale, xmldecl=True)
@@ -177,6 +176,6 @@ def write_qr_codes(
                 qr.save(str(destination), scale=scale)
             written += 1
             paths.append(str(destination))
-        except Exception:
+        except (OSError, TypeError, ValueError):
             failed += 1
     return QrSummary(total=total, written=written, failed=failed, paths=tuple(paths))

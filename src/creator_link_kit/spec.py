@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from .config import Convention
+from .config import Convention, convention_fingerprint
 from .links import build_url, validate_url
 from .models import AuditIssue, LinkAudit, LinkIdentifiers, LinkSpecification
 
@@ -46,7 +46,9 @@ def build_link_specification(
         brand_id=supplied_identifiers.brand_id,
         campaign_id=supplied_identifiers.campaign_id or params.get("utm_id"),
         creator_id=supplied_identifiers.creator_id,
-        placement_id=(supplied_identifiers.placement_id or params.get("utm_content")),
+        # v0.1 conventions commonly used creator handles in utm_content;
+        # handles are not stable primary identifiers.
+        placement_id=supplied_identifiers.placement_id,
     )
     effective_params = _params_with_identifier_defaults(
         params, convention, resolved_identifiers
@@ -64,4 +66,5 @@ def build_link_specification(
         identifiers=resolved_identifiers,
         config_version=convention.version,
         audit=audit,
+        config_fingerprint=convention_fingerprint(convention),
     )

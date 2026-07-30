@@ -8,10 +8,13 @@ Hosted provider adapters belong in a separate private service.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 from urllib.parse import urlsplit
+
+from .urls import authority_error
 
 IDENTIFIER_FIELDS = ("brand_id", "campaign_id", "creator_id", "placement_id")
 
@@ -35,12 +38,10 @@ def _absolute_http_url(value: str, label: str) -> str:
         raise ValueError(f"{label} cannot be parsed: {exc}") from exc
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ValueError(f"{label} must be an absolute http or https URL")
-    if parsed.username is not None or parsed.password is not None:
-        raise ValueError(f"{label} must not include embedded credentials")
-    try:
-        _ = parsed.port
-    except ValueError as exc:
-        raise ValueError(f"{label} has an invalid port: {exc}") from exc
+    error = authority_error(parsed)
+    if error is not None:
+        suffix = error.removeprefix("URL")
+        raise ValueError(f"{label}{suffix}")
     return cleaned
 
 
@@ -168,6 +169,7 @@ class LinkSpecification:
     config_version: int
     audit: LinkAudit
     schema_version: int = 1
+    config_fingerprint: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -188,9 +190,16 @@ class LinkSpecification:
             raise ValueError("config_version must be a positive integer")
         if not isinstance(self.schema_version, int) or self.schema_version < 1:
             raise ValueError("schema_version must be a positive integer")
+        if self.config_fingerprint is not None:
+            if not isinstance(self.config_fingerprint, str) or not re.fullmatch(
+                r"[0-9a-f]{64}", self.config_fingerprint
+            ):
+                raise ValueError(
+                    "config_fingerprint must be a lowercase SHA-256 hex digest"
+                )
 
     def as_dict(self) -> dict[str, object]:
-        return {
+        payload: dict[str, object] = {
             "schema_version": self.schema_version,
             "config_version": self.config_version,
             "original_destination": self.original_destination,
@@ -198,6 +207,9 @@ class LinkSpecification:
             "ids": self.identifiers.as_dict(),
             "audit": self.audit.as_dict(),
         }
+        if self.config_fingerprint is not None:
+            payload["config_fingerprint"] = self.config_fingerprint
+        return payload
 
     def to_json(self, *, indent: int | None = 2) -> str:
         separators = (",", ":") if indent is None else None
