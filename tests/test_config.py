@@ -1,9 +1,14 @@
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
-from creator_link_kit.config import ConfigError, convention_from_dict, load_convention, starter_convention
+from creator_link_kit.config import (
+    ConfigError,
+    convention_from_dict,
+    load_convention,
+    starter_convention,
+)
 
 
 class ConfigTests(unittest.TestCase):
@@ -37,11 +42,19 @@ class ConfigTests(unittest.TestCase):
         with self.assertRaisesRegex(ConfigError, "discount_code_pattern"):
             convention_from_dict(raw)
 
+    def test_rejects_reserved_discount_column(self):
+        raw = starter_convention()
+        raw["batch"]["discount_code_column"] = "status"
+        with self.assertRaisesRegex(ConfigError, "reserved output column"):
+            convention_from_dict(raw)
+
     def test_load_json(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "config.json"
             path.write_text(json.dumps(starter_convention()), encoding="utf-8")
-            self.assertEqual(load_convention(path).base_url, "https://shop.example.com/product")
+            self.assertEqual(
+                load_convention(path).base_url, "https://shop.example.com/product"
+            )
 
     def test_bad_json_reports_location(self):
         with tempfile.TemporaryDirectory() as tmp:
