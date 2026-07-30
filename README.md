@@ -20,8 +20,8 @@ putting credentials or client data in this public package.
   columns
 - batch-level duplicate `placement_id` rejection
 - production mode, where an unapproved destination domain is a hard error
-- JSON link specifications with destinations, IDs, config version, and audit
-  results
+- JSON link specifications with destinations, IDs, config version, a
+  deterministic configuration fingerprint, and audit results
 - provider-neutral request, response, and adapter protocol models
 - optional placement-specific discount-code generation with pattern and
   case-insensitive uniqueness checks
@@ -168,6 +168,7 @@ The result has a stable, provider-neutral shape:
 {
   "schema_version": 1,
   "config_version": 1,
+  "config_fingerprint": "14f12541e5132116a6dc06cf0788fa92bed06fccc5ac9815cdde4f698e51b80f",
   "original_destination": "https://shop.example.com/product",
   "generated_destination": "https://shop.example.com/product?utm_medium=influencer&utm_source=youtube&utm_campaign=cmp-glowdrop-launch&utm_id=cmp-glowdrop-launch&utm_content=plc-greta-video-01",
   "ids": {
@@ -187,6 +188,12 @@ The result has a stable, provider-neutral shape:
 
 The exact query-parameter order is not part of the specification contract.
 Consumers should parse the URL rather than compare its raw string ordering.
+
+`config_fingerprint` is a deterministic SHA-256 digest of the normalized
+convention, including its rules, defaults, domain policy, batch mappings, and
+mode. It identifies which policy produced a specification but is not a
+signature, authentication token, or substitute for storing the convention
+itself. `schema_version` remains `1`; the fingerprint is an additive field.
 
 ## Convention file
 
@@ -324,8 +331,10 @@ clk qr --url 'https://shop.example.com/product?...' --out-dir qr-codes
 
 SVG is the default; PNG is also supported. Filenames prefer `placement_id`,
 then creator-oriented columns, and are sanitized against path traversal and
-case-insensitive collisions. URL validation rejects non-HTTP(S), malformed-port,
-and credentialed URLs. QR generation stays offline.
+case-insensitive collisions. These are output labels only; a handle or
+`utm_content` value from a legacy file is never treated as a stable placement
+identity. URL validation rejects non-HTTP(S), malformed-port, and credentialed
+URLs. QR generation stays offline.
 
 ## Provider-neutral integration
 
@@ -473,6 +482,8 @@ Existing version-1 convention files remain valid.
 - A missing `mode` defaults to `development`, preserving the earlier external
   domain warning behavior.
 - A missing `batch.id_columns` remains valid.
+- Legacy batch files without v0.2 ID columns or discount-code configuration
+  still load, build links, and emit specifications.
 - Arbitrary governed `utm_*` parameters still work.
 - To adopt the v0.2 agency convention, add `utm_id`, map `utm_content` to a
   stable placement ID, add the standard ID columns, and switch to production
@@ -497,7 +508,8 @@ non-secret campaign identifiers. It must not contain:
 - live merchant discount codes or unpublished QR assets
 
 Link specifications copy only the four approved identifier fields. They do not
-copy arbitrary roster columns. CSV files written by the CLI also neutralize
+copy arbitrary roster columns. A legacy creator handle in `utm_content` is not
+promoted to `placement_id`. CSV files written by the CLI also neutralize
 spreadsheet-formula prefixes. URLs with malformed ports or embedded credentials
 are rejected during build and audit. See `SECURITY.md` and
 `docs/PRIVATE_SERVICE_INTEGRATION.md` for the full policy.

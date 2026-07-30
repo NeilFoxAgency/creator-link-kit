@@ -83,6 +83,7 @@ Store the complete link specification as immutable JSON together with:
 - provider name
 - provider link ID
 - managed tracking URL
+- configuration fingerprint from the immutable link specification
 - provisioning idempotency key
 - creation timestamp
 - last verification timestamp

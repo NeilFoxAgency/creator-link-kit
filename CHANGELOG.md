@@ -11,6 +11,8 @@
   placements for the same creator.
 - Added production mode with hard failures for unapproved destination domains.
 - Added machine-readable JSON link specifications and JSONL batch export.
+- Added a deterministic SHA-256 configuration fingerprint to generated link
+  specifications without changing `schema_version`.
 - Added provider-neutral link provisioning models and a `LinkProvider` protocol.
 - Added optional placement-specific discount-code generation with template
   expansion, regex validation, and case-insensitive uniqueness checks.
@@ -22,6 +24,8 @@
 - Neutralized spreadsheet-formula prefixes in generated and audit CSV exports.
 - Documented and hardened the public-repository boundary for secrets, commerce
   data, orders, customers, and private analytics.
+- Added a literal v0.1 compatibility fixture covering legacy handle-based
+  `utm_content` generation without v0.2 ID or discount-code columns.
 
 ## 0.1.0 - 2026-07-16
 
