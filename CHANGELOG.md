@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Audit and QR accept free-form text (for example a YouTube description)
+  and extract absolute http(s) URLs, stripping common trailing punctuation
+  while preserving one-URL-per-line behavior for bare URL lines.
+
 ## 0.2.0 - 2026-07-30
 
 - Added governed `utm_id` support to the starter convention and cross-link

@@ -392,6 +392,18 @@ For CSV input, the CLI automatically looks for common URL columns including
 `generated_url`, `url`, `link`, `landing_url`, and `destination_url`. Use
 `--url-column` to override detection.
 
+Non-CSV text is also accepted. You can paste a YouTube description or other
+prose that mixes sentences with campaign links; the CLI extracts absolute
+http(s) URLs, strips common trailing punctuation, and keeps one-URL-per-line
+behavior when a line is already a bare URL.
+
+```bash
+clk audit \
+  --config creator-links.json \
+  --input youtube-description.txt \
+  --format text
+```
+
 Warnings do not fail the command unless `--strict` is supplied. Errors always
 produce exit code 1. Across an audit set, `CLK110` rejects one `utm_campaign`
 paired with multiple `utm_id` values, and `CLK111` rejects one `utm_id` reused
