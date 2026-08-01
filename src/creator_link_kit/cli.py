@@ -22,6 +22,7 @@ from .qr import (
 )
 from .report import to_csv, to_html, to_json, to_text
 from .spec import build_link_specification
+from .urls import extract_http_urls
 
 
 def _param(value: str) -> tuple[str, str]:
@@ -56,7 +57,8 @@ def _read_audit_urls(path: Path, url_column: str | None) -> list[str]:
                     "could not identify URL column; pass --url-column explicitly"
                 )
             return [row.get(column, "") for row in reader]
-    return [line.strip() for line in path.read_text(encoding="utf-8").splitlines()]
+    # Free-form text: one URL per line or URLs embedded in creator descriptions.
+    return extract_http_urls(path.read_text(encoding="utf-8"))
 
 
 def _add_identifier_arguments(parser: argparse.ArgumentParser) -> None:
@@ -101,7 +103,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     audit_parser = subparsers.add_parser("audit", help="audit links from CSV or text")
     audit_parser.add_argument("--config", required=True)
-    audit_parser.add_argument("--input", required=True)
+    audit_parser.add_argument(
+        "--input",
+        required=True,
+        help=(
+            "CSV of links, or a text file with one URL per line, or free-form "
+            "prose (for example a YouTube description) containing http(s) URLs"
+        ),
+    )
     audit_parser.add_argument("--url-column")
     audit_parser.add_argument(
         "--format", choices=("text", "json", "csv", "html"), default="text"
@@ -184,10 +193,7 @@ def main(argv: list[str] | None = None) -> int:
                         )
                     )
                 else:
-                    urls = [
-                        line.strip()
-                        for line in input_path.read_text(encoding="utf-8").splitlines()
-                    ]
+                    urls = extract_http_urls(input_path.read_text(encoding="utf-8"))
                     jobs.extend(make_qr_jobs_from_urls(urls))
             if not jobs:
                 raise ValueError("provide at least one --url or --input with links")
