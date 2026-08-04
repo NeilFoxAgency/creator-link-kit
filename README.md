@@ -244,7 +244,7 @@ The starter convention is equivalent to:
     },
     "url_column": "landing_url",
     "id_columns": {
-      "brand_id": "brand_id",
+      "brand_id": "brd-glowdrop",
       "campaign_id": "campaign_id",
       "creator_id": "creator_id",
       "placement_id": "placement_id"
@@ -430,7 +430,7 @@ same convention without hand-writing installation and CLI steps:
 ```
 
 | Input | Required | Default | Purpose |
-| --- | --- | --- | --- |
+| --- | --- | --- |
 | `config` | yes | - | Convention file path |
 | `input` | yes | - | CSV or text file containing links |
 | `url-column` | no | auto | CSV column containing the URL |
@@ -462,6 +462,7 @@ is at `.github/workflows/example-audit.yml`.
 | `CLK109` | error | Value is empty |
 | `CLK110` | error | One `utm_campaign` is paired with multiple `utm_id` values |
 | `CLK111` | error | One `utm_id` is paired with multiple campaign names |
+| `CLK115` | error | Value is a reserved or placeholder string (`null`, `n/a`, `test`, …) |
 
 Batch duplicate-placement failures are reported in the row's `issues` field
 before URL generation and do not receive a `CLK` code because they concern the
