@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Reject reserved and placeholder UTM values (`null`, `undefined`, `n/a`,
+  `test`, `example`, `placeholder`, `tbd`, and related forms) with **CLK115**
+  during build and audit so unfinished template or CMS defaults do not reach
+  GA4 and similar tools.
+
 ## 0.2.0 - 2026-07-30
 
 - Added governed `utm_id` support to the starter convention and cross-link
