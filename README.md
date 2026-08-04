@@ -244,7 +244,7 @@ The starter convention is equivalent to:
     },
     "url_column": "landing_url",
     "id_columns": {
-      "brand_id": "brd-glowdrop",
+      "brand_id": "brand_id",
       "campaign_id": "campaign_id",
       "creator_id": "creator_id",
       "placement_id": "placement_id"
@@ -430,7 +430,7 @@ same convention without hand-writing installation and CLI steps:
 ```
 
 | Input | Required | Default | Purpose |
-| --- | --- | --- |
+| --- | --- | --- | --- |
 | `config` | yes | - | Convention file path |
 | `input` | yes | - | CSV or text file containing links |
 | `url-column` | no | auto | CSV column containing the URL |
