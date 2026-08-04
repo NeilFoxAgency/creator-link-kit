@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Added **CLK114** audit detection for misspelled UTM parameter names
+  (`utm_souce`, `utm-source`, `UTM_SOURCE`, and close variants). GA4 ignores
+  unknown keys, so these typos previously produced silent attribution loss.
+
 ## 0.2.0 - 2026-07-30
 
 - Added governed `utm_id` support to the starter convention and cross-link
