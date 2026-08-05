@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Added cross-link placement-ID consistency checks (`CLK116`) so the same
+  `utm_content` value cannot label different campaigns or destinations within
+  one audit set. Same placement on different platforms remains allowed when the
+  campaign and destination match.
+
+
 ## 0.2.0 - 2026-07-30
 
 - Added governed `utm_id` support to the starter convention and cross-link
