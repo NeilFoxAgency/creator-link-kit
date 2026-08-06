@@ -33,8 +33,7 @@ def _code_summary(result: AuditResult) -> list[tuple[str, int, int]]:
         else:
             counts[issue.code][1] += 1
     return [
-        (code, errors, warnings)
-        for code, (errors, warnings) in sorted(counts.items())
+        (code, errors, warnings) for code, (errors, warnings) in sorted(counts.items())
     ]
 
 
@@ -153,17 +152,17 @@ def to_html(result: AuditResult) -> str:
         parts.append("<h2>By rule code</h2>")
         parts.append("<table>")
         parts.append(
-            "<thead><tr><th scope=\"col\">Code</th>"
-            "<th scope=\"col\">Errors</th>"
-            "<th scope=\"col\">Warnings</th></tr></thead>"
+            '<thead><tr><th scope="col">Code</th>'
+            '<th scope="col">Errors</th>'
+            '<th scope="col">Warnings</th></tr></thead>'
         )
         parts.append("<tbody>")
         for code, errors, warnings in summary:
             parts.append(
                 "<tr>"
                 f"<td><code>{html.escape(code)}</code></td>"
-                f"<td class=\"error\">{errors}</td>"
-                f"<td class=\"warning\">{warnings}</td>"
+                f'<td class="error">{errors}</td>'
+                f'<td class="warning">{warnings}</td>'
                 "</tr>"
             )
         parts.append("</tbody></table></section>")
