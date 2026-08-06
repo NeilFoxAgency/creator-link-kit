@@ -23,13 +23,33 @@ def issue_dict(issue: Issue) -> dict[str, object]:
     }
 
 
+def _code_summary(result: AuditResult) -> list[tuple[str, int, int]]:
+    """Return (code, error_count, warning_count) sorted by code."""
+
+    counts: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    for issue in result.issues:
+        if issue.severity == "error":
+            counts[issue.code][0] += 1
+        else:
+            counts[issue.code][1] += 1
+    return [
+        (code, errors, warnings)
+        for code, (errors, warnings) in sorted(counts.items())
+    ]
+
+
 def to_json(result: AuditResult) -> str:
+    by_code = {
+        code: {"errors": errors, "warnings": warnings}
+        for code, errors, warnings in _code_summary(result)
+    }
     return json.dumps(
         {
             "checked": result.checked,
             "clean": result.clean,
             "errors": len(result.errors),
             "warnings": len(result.warnings),
+            "by_code": by_code,
             "issues": [issue_dict(issue) for issue in result.issues],
         },
         indent=2,
@@ -64,6 +84,16 @@ def to_text(result: AuditResult) -> str:
         f"{result.checked} links checked: {result.clean} clean, "
         f"{len(result.errors)} error(s), {len(result.warnings)} warning(s)"
     )
+    summary = _code_summary(result)
+    if summary:
+        lines.append("By rule code:")
+        for code, errors, warnings in summary:
+            parts: list[str] = []
+            if errors:
+                parts.append(f"{errors} error(s)")
+            if warnings:
+                parts.append(f"{warnings} warning(s)")
+            lines.append(f"  {code}: {', '.join(parts)}")
     return "\n".join(lines)
 
 
@@ -86,8 +116,16 @@ def to_html(result: AuditResult) -> str:
         "body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; "
         "line-height: 1.45; margin: 1.5rem; max-width: 52rem; }",
         "h1 { font-size: 1.35rem; margin-bottom: 0.25rem; }",
+        "h2 { font-size: 1.1rem; margin-top: 1.5rem; }",
         ".summary { margin: 1rem 0 1.5rem; padding: 0.75rem 1rem; "
         "border: 1px solid #ccc; border-radius: 0.4rem; }",
+        ".code-summary { margin: 0 0 1.5rem; padding: 0.75rem 1rem; "
+        "border: 1px solid #ccc; border-radius: 0.4rem; }",
+        ".code-summary table { border-collapse: collapse; width: 100%; "
+        "font-size: 0.95rem; }",
+        ".code-summary th, .code-summary td { text-align: left; "
+        "padding: 0.25rem 0.5rem 0.25rem 0; }",
+        ".code-summary th { font-weight: 600; }",
         ".row-block { margin-bottom: 1.25rem; }",
         ".row-url { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; "
         "font-size: 0.9rem; word-break: break-all; }",
@@ -95,7 +133,7 @@ def to_html(result: AuditResult) -> str:
         ".error { color: #b00020; }",
         ".warning { color: #8a5a00; }",
         "@media (prefers-color-scheme: dark) {",
-        "  .summary { border-color: #555; }",
+        "  .summary, .code-summary { border-color: #555; }",
         "  .error { color: #ff8a9b; }",
         "  .warning { color: #ffcc66; }",
         "}",
@@ -108,6 +146,27 @@ def to_html(result: AuditResult) -> str:
         f"{len(result.errors)} error(s), {len(result.warnings)} warning(s)",
         "</p>",
     ]
+
+    summary = _code_summary(result)
+    if summary:
+        parts.append('<section class="code-summary" aria-label="Issues by rule code">')
+        parts.append("<h2>By rule code</h2>")
+        parts.append("<table>")
+        parts.append(
+            "<thead><tr><th scope=\"col\">Code</th>"
+            "<th scope=\"col\">Errors</th>"
+            "<th scope=\"col\">Warnings</th></tr></thead>"
+        )
+        parts.append("<tbody>")
+        for code, errors, warnings in summary:
+            parts.append(
+                "<tr>"
+                f"<td><code>{html.escape(code)}</code></td>"
+                f"<td class=\"error\">{errors}</td>"
+                f"<td class=\"warning\">{warnings}</td>"
+                "</tr>"
+            )
+        parts.append("</tbody></table></section>")
 
     if not result.issues:
         parts.append("<p>No issues found.</p>")

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Audit text and HTML reports now include a **By rule code** frequency
+  summary so operators can see which CLK codes dominate a batch before
+  reading per-row detail. JSON reports gain an additive `by_code` object
+  with per-code error and warning counts. Existing summary totals and
+  issue lists are unchanged.
+
 ## 0.2.0 - 2026-07-30
 
 - Added governed `utm_id` support to the starter convention and cross-link

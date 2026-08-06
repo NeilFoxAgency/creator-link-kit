@@ -29,6 +29,9 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(payload["checked"], 1)
         self.assertGreater(payload["warnings"], 0)
         self.assertGreater(payload["errors"], 0)
+        self.assertIn("by_code", payload)
+        self.assertIn("CLK004", payload["by_code"])
+        self.assertEqual(payload["by_code"]["CLK004"]["warnings"], 1)
 
     def test_csv(self):
         rows = list(csv.DictReader(io.StringIO(to_csv(self.result))))
@@ -38,6 +41,20 @@ class ReportTests(unittest.TestCase):
         report = to_text(self.result)
         self.assertIn("CLK004", report)
         self.assertIn("1 links checked", report)
+        self.assertIn("By rule code:", report)
+        self.assertIn("CLK004:", report)
+
+    def test_text_code_summary_aggregates(self):
+        convention = convention_from_dict(starter_convention())
+        urls = [
+            "https://shop.example.com/product",
+            "https://shop.example.com/other",
+        ]
+        result = audit_urls(urls, convention)
+        report = to_text(result)
+        self.assertIn("By rule code:", report)
+        # Both URLs lack UTMs, so CLK004 should appear twice as warnings.
+        self.assertRegex(report, r"CLK004: 2 warning\(s\)")
 
     def test_html_includes_summary_and_issue(self):
         report = to_html(self.result)
@@ -45,6 +62,8 @@ class ReportTests(unittest.TestCase):
         self.assertIn("1 links checked", report)
         self.assertIn("CLK004", report)
         self.assertIn("https://shop.example.com/product", report)
+        self.assertIn("By rule code", report)
+        self.assertIn("<table>", report)
 
     def test_html_escapes_dynamic_content(self):
         convention = convention_from_dict(starter_convention())
