@@ -58,6 +58,19 @@ class LinkTests(unittest.TestCase):
                 self.convention,
             )
 
+    def test_build_rejects_missing_or_malformed_hostnames(self):
+        for url in (
+            "https://:443/product",
+            "https://./product",
+            "https://bad host.example/product",
+        ):
+            with self.subTest(url=url):
+                with self.assertRaisesRegex(ValueError, "hostname"):
+                    build_url(url, self.params(), self.convention)
+
+                issues = validate_url(url, self.convention)
+                self.assertEqual([issue.code for issue in issues], ["CLK001"])
+
     def test_case_near_miss(self):
         issues = validate_url(self.tagged_url(source="YouTube"), self.convention)
         codes = {issue.code for issue in issues}
