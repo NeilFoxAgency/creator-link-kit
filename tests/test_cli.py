@@ -131,9 +131,7 @@ class CliTests(unittest.TestCase):
             )
             output = io.StringIO()
             with contextlib.redirect_stdout(output):
-                code = main(
-                    ["audit", "--config", str(config), "--input", str(prose)]
-                )
+                code = main(["audit", "--config", str(config), "--input", str(prose)])
             self.assertEqual(code, 0)
             self.assertIn("checked", output.getvalue().lower())
 
