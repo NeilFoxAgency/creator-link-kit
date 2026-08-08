@@ -34,10 +34,7 @@ class ExtractHttpUrlsTests(unittest.TestCase):
         self.assertEqual(urls[1], "https://shop.example.com/about")
 
     def test_preserves_duplicate_urls_for_audit(self):
-        text = (
-            "https://shop.example.com/x\n"
-            "again: https://shop.example.com/x\n"
-        )
+        text = "https://shop.example.com/x\nagain: https://shop.example.com/x\n"
         self.assertEqual(
             extract_http_urls(text),
             ["https://shop.example.com/x", "https://shop.example.com/x"],
