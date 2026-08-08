@@ -1,4 +1,3 @@
-Preparing worktree (detached HEAD 5c91d80)
 """URL building and auditing rules."""
 
 from __future__ import annotations
