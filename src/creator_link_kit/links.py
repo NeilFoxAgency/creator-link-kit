@@ -1,3 +1,4 @@
+Preparing worktree (detached HEAD 5c91d80)
 """URL building and auditing rules."""
 
 from __future__ import annotations
@@ -349,7 +350,9 @@ def _placement_consistency_issues(
 
     content_to_campaigns: dict[str, set[str]] = defaultdict(set)
     content_to_destinations: dict[str, set[str]] = defaultdict(set)
-    content_to_rows: dict[str, list[tuple[int, str, str | None, str]]] = defaultdict(list)
+    content_to_rows: dict[str, list[tuple[int, str, str | None, str]]] = defaultdict(
+        list
+    )
 
     for row, url, content, campaign, destination in observations:
         if campaign:
