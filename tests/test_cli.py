@@ -117,6 +117,26 @@ class CliTests(unittest.TestCase):
                     1,
                 )
 
+    def test_audit_extracts_urls_from_description_prose(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.json"
+            prose = Path(tmp) / "description.txt"
+            config.write_text(json.dumps(starter_convention()), encoding="utf-8")
+            prose.write_text(
+                "Shop now: https://shop.example.com/product?utm_source=youtube"
+                "&utm_medium=influencer&utm_campaign=cmp-spring-launch"
+                "&utm_id=cmp-spring-launch&utm_content=plc-greta-video-01).\n"
+                "Thanks for watching!\n",
+                encoding="utf-8",
+            )
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code = main(
+                    ["audit", "--config", str(config), "--input", str(prose)]
+                )
+            self.assertEqual(code, 0)
+            self.assertIn("checked", output.getvalue().lower())
+
 
 if __name__ == "__main__":
     unittest.main()
