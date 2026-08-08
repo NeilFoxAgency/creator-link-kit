@@ -1,4 +1,3 @@
-Preparing worktree (detached HEAD 7c5e1d3)
 import unittest
 
 from creator_link_kit.config import convention_from_dict, starter_convention
