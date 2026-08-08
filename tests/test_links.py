@@ -1,3 +1,4 @@
+Preparing worktree (detached HEAD 7c5e1d3)
 import unittest
 
 from creator_link_kit.config import convention_from_dict, starter_convention
@@ -235,17 +236,13 @@ class PlaceholderUtmValueTests(unittest.TestCase):
     def test_undefined_and_na_variants(self):
         for value in ("undefined", "n/a", "NA", "None", "N.A.", "nil"):
             with self.subTest(value=value):
-                issues = validate_url(
-                    self._url(utm_campaign=value), self.convention
-                )
+                issues = validate_url(self._url(utm_campaign=value), self.convention)
                 self.assertIn("CLK115", {issue.code for issue in issues})
 
     def test_test_and_example_values(self):
         for value in ("test", "testing", "example", "sample", "placeholder"):
             with self.subTest(value=value):
-                issues = validate_url(
-                    self._url(utm_content=value), self.convention
-                )
+                issues = validate_url(self._url(utm_content=value), self.convention)
                 self.assertIn("CLK115", {issue.code for issue in issues})
 
     def test_tbd_todo_xxx_default_unknown(self):
