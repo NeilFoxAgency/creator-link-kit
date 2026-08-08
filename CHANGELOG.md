@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Declared and CI-tested Python 3.13 support alongside 3.10–3.12.
+
 ## 0.2.0 - 2026-07-30
 
 - Added governed `utm_id` support to the starter convention and cross-link
