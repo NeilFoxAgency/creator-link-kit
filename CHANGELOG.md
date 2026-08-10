@@ -4,11 +4,7 @@
 
 - Hardened URL authority validation so empty hosts, spaces, underscores,
   empty DNS labels, and other malformed hostnames are rejected (`CLK001`).
-- Reject unresolved template placeholders in governed UTM values (`CLK112`).
-- Reject whitespace-only and untrimmed governed UTM values (`CLK113`).
-- Detect misspelled or non-canonical UTM parameter names (`CLK114`).
-- Reject reserved/placeholder UTM values such as `null`, `test`, and `tbd`
-  (`CLK115`).
+  Valid DNS names and IP literals continue to be accepted.
 
 ## 0.2.0 - 2026-07-30
 
