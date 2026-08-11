@@ -5,6 +5,10 @@
 - Hardened URL authority validation so empty hosts, spaces, underscores,
   empty DNS labels, and other malformed hostnames are rejected (`CLK001`).
   Valid DNS names and IP literals continue to be accepted.
+- Added placement-ID consistency checks during audit (`CLK116`): one
+  `utm_content` must not be paired with multiple campaigns or destinations
+  across the audited set. Same campaign and destination on different
+  platforms remains allowed.
 
 ## 0.2.0 - 2026-07-30
 
@@ -38,7 +42,3 @@
 - Added convention-as-code JSON configuration with optional YAML support.
 - Added validated single-link generation with double-tag protection.
 - Added roster CSV batch generation with row templates and isolated errors.
-- Added CSV and text audits with rule codes, near-miss suggestions, and duplicate
-  detection.
-- Added text, JSON, and CSV reports plus CI-friendly exit codes.
-- Added examples, tests, CI, security documentation, and an MIT license.
