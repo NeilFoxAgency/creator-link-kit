@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Hardened URL authority validation so empty hosts, spaces, underscores,
+  empty DNS labels, and other malformed hostnames are rejected (`CLK001`).
+  Valid DNS names and IP literals continue to be accepted.
+
 ## 0.2.0 - 2026-07-30
 
 - Added governed `utm_id` support to the starter convention and cross-link
