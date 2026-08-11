@@ -1,9 +1,9 @@
 import unittest
+from urllib.parse import urlsplit
 
 from creator_link_kit.config import convention_from_dict, starter_convention
 from creator_link_kit.links import build_url, validate_url
 from creator_link_kit.urls import authority_error
-from urllib.parse import urlsplit
 
 
 class HostnameAuthorityTests(unittest.TestCase):
