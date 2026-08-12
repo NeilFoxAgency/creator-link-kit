@@ -12,15 +12,37 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from .config import Convention, domain_is_owned
 from .urls import authority_error as _authority_error
 
-# Canonical UTM keys recognized by GA4 and most analytics tools.
-# Typos (utm_souce, utm-source, UTM_Source) are ignored silently by GA4.
-_STANDARD_UTM_KEYS = (
-    "utm_source",
-    "utm_medium",
-    "utm_campaign",
-    "utm_term",
-    "utm_content",
-    "utm_id",
+# Case-insensitive exact matches for values that almost always indicate an
+# unfilled template, CMS default, or programming null rather than a real
+# campaign dimension. Keeping the set tight avoids false positives on
+# legitimate short codes such as "yt" or "na" region tags when they appear
+# only as substrings.
+_PLACEHOLDER_UTM_VALUES = frozenset(
+    {
+        "null",
+        "undefined",
+        "none",
+        "n/a",
+        "na",
+        "n.a.",
+        "n.a",
+        "nil",
+        "test",
+        "testing",
+        "example",
+        "sample",
+        "placeholder",
+        "xxx",
+        "todo",
+        "tbd",
+        "default",
+        "unknown",
+        "notset",
+        "not-set",
+        "not_set",
+        "(not set)",
+        "(none)",
+    }
 )
 
 
@@ -99,6 +121,19 @@ def validate_params(
             continue
         if value == "":
             issues.append(Issue("CLK109", "error", "value is empty", key))
+            continue
+        if value.strip().lower() in _PLACEHOLDER_UTM_VALUES:
+            issues.append(
+                Issue(
+                    "CLK115",
+                    "error",
+                    (
+                        f"{value!r} is a reserved or placeholder UTM value "
+                        "and will pollute analytics"
+                    ),
+                    key,
+                )
+            )
             continue
         if len(value) > convention.max_value_length:
             issues.append(
@@ -189,32 +224,6 @@ def validate_url(url: str, convention: Convention) -> list[Issue]:
         )
 
     pairs = parse_qsl(parsed.query, keep_blank_values=True)
-    # Near-miss keys that look like UTMs but are not the canonical forms.
-    # GA4 ignores unknown parameter names, so these produce silent data loss.
-    for key, _value in pairs:
-        normalized = key.lower().replace("-", "_")
-        if key in _STANDARD_UTM_KEYS:
-            continue
-        if normalized in _STANDARD_UTM_KEYS or (
-            key.lower().startswith("utm")
-            and get_close_matches(normalized, _STANDARD_UTM_KEYS, n=1, cutoff=0.75)
-        ):
-            suggestion = get_close_matches(
-                normalized, list(_STANDARD_UTM_KEYS), n=1, cutoff=0.5
-            )
-            hint = f"; did you mean {suggestion[0]!r}?" if suggestion else ""
-            issues.append(
-                Issue(
-                    "CLK114",
-                    "error",
-                    (
-                        f"query parameter {key!r} looks like a misspelled UTM key"
-                        f"{hint}; GA4 ignores unknown parameter names"
-                    ),
-                    parameter=key,
-                )
-            )
-
     utm_pairs = [(key, value) for key, value in pairs if key.startswith("utm_")]
     if not utm_pairs:
         issues.append(Issue("CLK004", "warning", "URL has no UTM parameters"))
@@ -371,10 +380,89 @@ def _campaign_id_consistency_issues(
     return issues
 
 
+def _placement_consistency_issues(
+    observations: list[tuple[int, str, str, str | None, str]],
+) -> list[Issue]:
+    """Flag placement IDs reused across campaigns or destinations in an audit set.
+
+    When the convention maps stable placement_id values into utm_content, the same
+    placement must not label different campaigns or different landing destinations.
+    Reuse across platforms for the *same* campaign and destination is allowed.
+    """
+
+    if not observations:
+        return []
+
+    content_to_campaigns: dict[str, set[str]] = defaultdict(set)
+    content_to_destinations: dict[str, set[str]] = defaultdict(set)
+    content_to_rows: dict[str, list[tuple[int, str, str | None, str]]] = defaultdict(
+        list
+    )
+
+    for row, url, content, campaign, destination in observations:
+        if campaign:
+            content_to_campaigns[content].add(campaign)
+        content_to_destinations[content].add(destination)
+        content_to_rows[content].append((row, url, campaign, destination))
+
+    issues: list[Issue] = []
+
+    for content, campaigns in sorted(content_to_campaigns.items()):
+        if len(campaigns) < 2:
+            continue
+        campaign_list = ", ".join(sorted(repr(value) for value in campaigns))
+        for row, url, _campaign, _destination in content_to_rows[content]:
+            issues.append(
+                Issue(
+                    "CLK116",
+                    "error",
+                    (
+                        f"utm_content {content!r} is paired with multiple "
+                        f"utm_campaign values across this audit set "
+                        f"({campaign_list}); a placement ID must identify one "
+                        "sponsored asset under one campaign"
+                    ),
+                    parameter="utm_content",
+                    row=row,
+                    url=url,
+                )
+            )
+
+    for content, destinations in sorted(content_to_destinations.items()):
+        if len(destinations) < 2:
+            continue
+        already = {
+            (issue.row, issue.url)
+            for issue in issues
+            if issue.code == "CLK116" and issue.parameter == "utm_content"
+        }
+        dest_list = ", ".join(sorted(repr(value) for value in destinations))
+        for row, url, _campaign, _destination in content_to_rows[content]:
+            if (row, url) in already:
+                continue
+            issues.append(
+                Issue(
+                    "CLK116",
+                    "error",
+                    (
+                        f"utm_content {content!r} is paired with multiple "
+                        f"destinations across this audit set ({dest_list}); "
+                        "a placement ID must point at one landing destination"
+                    ),
+                    parameter="utm_content",
+                    row=row,
+                    url=url,
+                )
+            )
+
+    return issues
+
+
 def audit_urls(urls: Iterable[str], convention: Convention) -> AuditResult:
     issues: list[Issue] = []
     seen: dict[tuple[str, tuple[tuple[str, str], ...]], int] = {}
     campaign_id_pairs: list[tuple[int, str, str, str]] = []
+    placement_pairs: list[tuple[int, str, str, str | None, str]] = []
     checked = 0
     for row, raw_url in enumerate(urls, start=1):
         url = raw_url.strip()
@@ -407,6 +495,34 @@ def audit_urls(urls: Iterable[str], convention: Convention) -> AuditResult:
             utm_id = params.get("utm_id")
             if campaign and utm_id:
                 campaign_id_pairs.append((row, url, campaign, utm_id))
+            content = params.get("utm_content")
+            if content:
+                destination = "unknown"
+                if canonical is not None:
+                    destination = canonical[0]
+                else:
+                    try:
+                        parsed = urlsplit(url)
+                        if parsed.netloc and _authority_error(parsed) is None:
+                            pairs = parse_qsl(parsed.query, keep_blank_values=True)
+                            non_utm = urlencode(
+                                sorted(
+                                    (k, v) for k, v in pairs if not k.startswith("utm_")
+                                )
+                            )
+                            destination = urlunsplit(
+                                (
+                                    parsed.scheme.lower(),
+                                    parsed.netloc.lower(),
+                                    parsed.path or "/",
+                                    non_utm,
+                                    "",
+                                )
+                            )
+                    except ValueError:
+                        pass
+                placement_pairs.append((row, url, content, campaign, destination))
 
     issues.extend(_campaign_id_consistency_issues(campaign_id_pairs))
+    issues.extend(_placement_consistency_issues(placement_pairs))
     return AuditResult(checked=checked, issues=tuple(issues))
