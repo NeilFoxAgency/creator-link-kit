@@ -206,6 +206,118 @@ class LinkTests(unittest.TestCase):
         )
         self.assertIn("utm_id=cmp-spring-launch", url)
 
+    def test_placement_id_multiple_campaigns(self):
+        first = self.tagged_url()
+        second = (
+            self.tagged_url(source="instagram")
+            .replace("utm_campaign=cmp-spring-launch", "utm_campaign=cmp-other")
+            .replace("utm_id=cmp-spring-launch", "utm_id=cmp-other")
+        )
+        result = audit_urls([first, second], self.convention)
+        issues = [issue for issue in result.issues if issue.code == "CLK116"]
+        self.assertEqual(len(issues), 2)
+        self.assertTrue(all(issue.parameter == "utm_content" for issue in issues))
+        self.assertTrue(all("utm_campaign" in issue.message for issue in issues))
+
+    def test_placement_id_multiple_destinations(self):
+        first = self.tagged_url()
+        second = self.tagged_url().replace(
+            "https://shop.example.com/product",
+            "https://shop.example.com/other",
+            1,
+        )
+        result = audit_urls([first, second], self.convention)
+        issues = [issue for issue in result.issues if issue.code == "CLK116"]
+        self.assertEqual(len(issues), 2)
+        self.assertTrue(all("destinations" in issue.message for issue in issues))
+
+    def test_same_placement_same_campaign_different_platform_is_clean(self):
+        urls = [
+            self.tagged_url(),
+            self.tagged_url(source="instagram"),
+        ]
+        result = audit_urls(urls, self.convention)
+        self.assertNotIn("CLK116", {issue.code for issue in result.issues})
+
+    def test_distinct_placements_are_clean(self):
+        urls = [
+            self.tagged_url(),
+            self.tagged_url(source="instagram").replace(
+                "utm_content=plc-greta-01", "utm_content=plc-priya-01"
+            ),
+        ]
+        result = audit_urls(urls, self.convention)
+        self.assertNotIn("CLK116", {issue.code for issue in result.issues})
+
+
+class PlaceholderUtmValueTests(unittest.TestCase):
+    """CLK115: reserved or placeholder UTM values pollute analytics."""
+
+    def setUp(self):
+        self.convention = convention_from_dict(starter_convention())
+
+    def _url(self, **utm_overrides: str) -> str:
+        params = {
+            "utm_source": "youtube",
+            "utm_medium": "influencer",
+            "utm_campaign": "cmp-spring-launch",
+            "utm_id": "cmp-spring-launch",
+            "utm_content": "plc-greta-01",
+        }
+        params.update(utm_overrides)
+        query = "&".join(f"{k}={v}" for k, v in params.items())
+        return f"https://shop.example.com/product?{query}"
+
+    def test_null_value_is_error(self):
+        issues = validate_url(self._url(utm_source="null"), self.convention)
+        issue = next(item for item in issues if item.code == "CLK115")
+        self.assertEqual(issue.severity, "error")
+        self.assertEqual(issue.parameter, "utm_source")
+        self.assertIn("placeholder", issue.message.lower())
+
+    def test_undefined_and_na_variants(self):
+        for value in ("undefined", "n/a", "NA", "None", "N.A.", "nil"):
+            with self.subTest(value=value):
+                issues = validate_url(self._url(utm_campaign=value), self.convention)
+                self.assertIn("CLK115", {issue.code for issue in issues})
+
+    def test_test_and_example_values(self):
+        for value in ("test", "testing", "example", "sample", "placeholder"):
+            with self.subTest(value=value):
+                issues = validate_url(self._url(utm_content=value), self.convention)
+                self.assertIn("CLK115", {issue.code for issue in issues})
+
+    def test_tbd_todo_xxx_default_unknown(self):
+        for value in ("tbd", "todo", "xxx", "default", "unknown", "not-set"):
+            with self.subTest(value=value):
+                issues = validate_url(self._url(utm_id=value), self.convention)
+                self.assertIn("CLK115", {issue.code for issue in issues})
+
+    def test_build_rejects_placeholder(self):
+        params = {
+            "utm_source": "youtube",
+            "utm_campaign": "test",
+            "utm_id": "cmp-spring-launch",
+            "utm_content": "plc-greta-01",
+        }
+        with self.assertRaisesRegex(ValueError, "CLK115"):
+            build_url(
+                "https://shop.example.com/product",
+                params,
+                self.convention,
+            )
+
+    def test_legitimate_values_are_not_false_positives(self):
+        issues = validate_url(
+            self._url(
+                utm_source="youtube",
+                utm_campaign="cmp-spring-launch",
+                utm_content="plc-greta-01",
+            ),
+            self.convention,
+        )
+        self.assertNotIn("CLK115", {issue.code for issue in issues})
+
 
 class MisspelledUtmKeyTests(unittest.TestCase):
     def test_typo_utm_souce(self) -> None:
