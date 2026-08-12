@@ -2,11 +2,10 @@
 
 ## Unreleased
 
-- Added cross-link placement-ID consistency checks (`CLK116`) so the same
-  `utm_content` value cannot label different campaigns or destinations within
-  one audit set. Same placement on different platforms remains allowed when the
-  campaign and destination match.
-
+- Hardened URL authority validation so empty hosts, spaces, underscores,
+  empty DNS labels, and other malformed hostnames are rejected (`CLK001`).
+  Valid DNS names and IP literals continue to be accepted.
+- Declared and CI-tested Python 3.13 support alongside 3.10–3.12.
 
 ## 0.2.0 - 2026-07-30
 
