@@ -394,8 +394,9 @@ For CSV input, the CLI automatically looks for common URL columns including
 
 Warnings do not fail the command unless `--strict` is supplied. Errors always
 produce exit code 1. Across an audit set, `CLK110` rejects one `utm_campaign`
-paired with multiple `utm_id` values, and `CLK111` rejects one `utm_id` reused
-for multiple campaign names.
+paired with multiple `utm_id` values, `CLK111` rejects one `utm_id` reused
+for multiple campaign names, and `CLK116` rejects one `utm_content` paired
+with multiple campaigns or destinations.
 
 Audit output supports `text`, `json`, `csv`, and `html`. HTML reports are
 self-contained, escape all dynamic content, and can be shared offline:
@@ -462,7 +463,8 @@ is at `.github/workflows/example-audit.yml`.
 | `CLK109` | error | Value is empty |
 | `CLK110` | error | One `utm_campaign` is paired with multiple `utm_id` values |
 | `CLK111` | error | One `utm_id` is paired with multiple campaign names |
-| `CLK114` | error | Query key looks like a misspelled UTM parameter name |
+| `CLK115` | error | Value is a reserved or placeholder string (`null`, `n/a`, `test`, …) |
+| `CLK116` | error | One `utm_content` is paired with multiple campaigns or destinations |
 
 Batch duplicate-placement failures are reported in the row's `issues` field
 before URL generation and do not receive a `CLK` code because they concern the
