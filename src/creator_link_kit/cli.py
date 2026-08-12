@@ -55,7 +55,8 @@ def _read_audit_urls(path: Path, url_column: str | None) -> list[str]:
                 raise ValueError(
                     "could not identify URL column; pass --url-column explicitly"
                 )
-            return [row.get(column, "") for row in reader]
+            # Ragged rows yield None for the URL column; treat as blank.
+            return [(row.get(column) or "") for row in reader]
     return [line.strip() for line in path.read_text(encoding="utf-8").splitlines()]
 
 
