@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Audit text, HTML, and JSON reports now include a **by rule code** summary (error/warning counts per CLK code) so large placement audits are easier to triage.
 - Hardened URL authority validation so empty hosts, spaces, underscores,
   empty DNS labels, and other malformed hostnames are rejected (`CLK001`).
   Valid DNS names and IP literals continue to be accepted.
@@ -38,16 +39,9 @@
 - Rejected malformed-port and embedded-credential campaign URLs.
 - Neutralized spreadsheet-formula prefixes in generated and audit CSV exports.
 - Documented and hardened the public-repository boundary for secrets, commerce
-  data, orders, customers, and private analytics.
-- Added a literal v0.1 compatibility fixture covering legacy handle-based
-  `utm_content` generation without v0.2 ID or discount-code columns.
+  data, and private campaign information.
 
 ## 0.1.0 - 2026-07-16
 
-- Added convention-as-code JSON configuration with optional YAML support.
-- Added validated single-link generation with double-tag protection.
-- Added roster CSV batch generation with row templates and isolated errors.
-- Added CSV and text audits with rule codes, near-miss suggestions, and duplicate
-  detection.
-- Added text, JSON, and CSV reports plus CI-friendly exit codes.
-- Added examples, tests, CI, security documentation, and an MIT license.
+- Initial release: convention-as-code UTM link generation, batch roster
+  processing, and audit CLI for creator campaign links.
