@@ -10,6 +10,10 @@
   `utm_content` value cannot label different campaigns or destinations within
   one audit set. The same placement on different platforms remains allowed
   when the campaign and destination match.
+- Reject reserved and placeholder UTM values (`null`, `undefined`, `n/a`,
+  `test`, `example`, `placeholder`, `tbd`, and related forms) with `CLK115`
+  during build and audit so unfinished template or CMS defaults do not reach
+  GA4 and similar tools.
 
 ## 0.2.0 - 2026-07-30
 

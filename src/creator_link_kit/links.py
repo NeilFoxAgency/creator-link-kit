@@ -12,6 +12,39 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from .config import Convention, domain_is_owned
 from .urls import authority_error as _authority_error
 
+# Case-insensitive exact matches for values that almost always indicate an
+# unfilled template, CMS default, or programming null rather than a real
+# campaign dimension. Keeping the set tight avoids false positives on
+# legitimate short codes such as "yt" or "na" region tags when they appear
+# only as substrings.
+_PLACEHOLDER_UTM_VALUES = frozenset(
+    {
+        "null",
+        "undefined",
+        "none",
+        "n/a",
+        "na",
+        "n.a.",
+        "n.a",
+        "nil",
+        "test",
+        "testing",
+        "example",
+        "sample",
+        "placeholder",
+        "xxx",
+        "todo",
+        "tbd",
+        "default",
+        "unknown",
+        "notset",
+        "not-set",
+        "not_set",
+        "(not set)",
+        "(none)",
+    }
+)
+
 
 @dataclass(frozen=True)
 class Issue:
@@ -88,6 +121,19 @@ def validate_params(
             continue
         if value == "":
             issues.append(Issue("CLK109", "error", "value is empty", key))
+            continue
+        if value.strip().lower() in _PLACEHOLDER_UTM_VALUES:
+            issues.append(
+                Issue(
+                    "CLK115",
+                    "error",
+                    (
+                        f"{value!r} is a reserved or placeholder UTM value "
+                        "and will pollute analytics"
+                    ),
+                    key,
+                )
+            )
             continue
         if len(value) > convention.max_value_length:
             issues.append(
