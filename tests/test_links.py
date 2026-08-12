@@ -206,6 +206,49 @@ class LinkTests(unittest.TestCase):
         )
         self.assertIn("utm_id=cmp-spring-launch", url)
 
+    def test_placement_id_multiple_campaigns(self):
+        first = self.tagged_url()
+        second = (
+            self.tagged_url(source="instagram")
+            .replace("utm_campaign=cmp-spring-launch", "utm_campaign=cmp-other")
+            .replace("utm_id=cmp-spring-launch", "utm_id=cmp-other")
+        )
+        result = audit_urls([first, second], self.convention)
+        issues = [issue for issue in result.issues if issue.code == "CLK116"]
+        self.assertEqual(len(issues), 2)
+        self.assertTrue(all(issue.parameter == "utm_content" for issue in issues))
+        self.assertTrue(all("utm_campaign" in issue.message for issue in issues))
+
+    def test_placement_id_multiple_destinations(self):
+        first = self.tagged_url()
+        second = self.tagged_url().replace(
+            "https://shop.example.com/product",
+            "https://shop.example.com/other",
+            1,
+        )
+        result = audit_urls([first, second], self.convention)
+        issues = [issue for issue in result.issues if issue.code == "CLK116"]
+        self.assertEqual(len(issues), 2)
+        self.assertTrue(all("destinations" in issue.message for issue in issues))
+
+    def test_same_placement_same_campaign_different_platform_is_clean(self):
+        urls = [
+            self.tagged_url(),
+            self.tagged_url(source="instagram"),
+        ]
+        result = audit_urls(urls, self.convention)
+        self.assertNotIn("CLK116", {issue.code for issue in result.issues})
+
+    def test_distinct_placements_are_clean(self):
+        urls = [
+            self.tagged_url(),
+            self.tagged_url(source="instagram").replace(
+                "utm_content=plc-greta-01", "utm_content=plc-priya-01"
+            ),
+        ]
+        result = audit_urls(urls, self.convention)
+        self.assertNotIn("CLK116", {issue.code for issue in result.issues})
+
 
 class PlaceholderUtmValueTests(unittest.TestCase):
     """CLK115: reserved or placeholder UTM values pollute analytics."""

@@ -240,6 +240,34 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(summary.ok, 1)
         self.assertNotIn("discount_code", rows[0])
 
+    def test_ragged_roster_row_fails_cleanly(self):
+        # A row with fewer cells than the header makes csv.DictReader yield
+        # None for the missing columns; this must not crash the whole batch.
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "roster.csv"
+            source.write_text(
+                "brand_id,campaign_id,creator_id,placement_id,handle,platform,"
+                "landing_url\n"
+                "brd-soap,cmp-spring-launch,crt-greta,plc-greta-video-01,"
+                "greta,youtube,\n"
+                "brd-soap,cmp-spring-launch,crt-priya\n",
+                encoding="utf-8",
+            )
+            rows, summary = batch_csv(source, None, self.convention)
+        self.assertEqual(summary.total, 2)
+        self.assertEqual(summary.ok, 1)
+        self.assertEqual(summary.failed, 1)
+        self.assertEqual(rows[0]["status"], "ok")
+        self.assertEqual(rows[1]["status"], "error")
+        self.assertIn("placement_id must be non-empty", rows[1]["issues"])
+
+    def test_missing_trailing_url_cell_falls_back_to_base_url(self):
+        source = self.row("plc-greta-video-01")
+        source["landing_url"] = None  # type: ignore[dict-item]
+        rows, summary = generate_rows([source], self.convention)
+        self.assertEqual(summary.ok, 1)
+        self.assertIn("https://shop.example.com/product?", rows[0]["generated_url"])
+
     def test_csv_round_trip_and_jsonl_specs(self):
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "roster.csv"

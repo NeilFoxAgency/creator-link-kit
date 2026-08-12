@@ -105,6 +105,25 @@ class CliTests(unittest.TestCase):
             payload = json.loads(specs.read_text(encoding="utf-8").strip())
             self.assertEqual(payload["ids"]["creator_id"], "crt-greta")
 
+    def test_audit_tolerates_ragged_csv_rows(self):
+        # A row missing the URL cell must be skipped as blank, not crash with
+        # an uncaught AttributeError from audit_urls.
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.json"
+            links = Path(tmp) / "links.csv"
+            config.write_text(json.dumps(starter_convention()), encoding="utf-8")
+            links.write_text(
+                "notes,url\n"
+                "ok,https://shop.example.com/product?utm_source=youtube\n"
+                "orphaned-note\n",
+                encoding="utf-8",
+            )
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code = main(["audit", "--config", str(config), "--input", str(links)])
+            self.assertEqual(code, 1)
+            self.assertIn("1 links checked", output.getvalue())
+
     def test_audit_exit_code(self):
         with tempfile.TemporaryDirectory() as tmp:
             config = Path(tmp) / "config.json"

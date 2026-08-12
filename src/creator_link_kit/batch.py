@@ -65,7 +65,13 @@ def _render_discount_code(row: dict[str, str], convention: Convention) -> str | 
 def generate_rows(
     rows: Iterable[dict[str, str]], convention: Convention
 ) -> tuple[list[dict[str, str]], BatchSummary]:
-    source_rows = [dict(source_row) for source_row in rows]
+    # csv.DictReader yields None for cells missing from short (ragged) rows.
+    # Normalize them to "" so a missing trailing cell behaves exactly like an
+    # explicit empty cell instead of crashing downstream .strip() calls.
+    source_rows = [
+        {key: ("" if value is None else value) for key, value in source_row.items()}
+        for source_row in rows
+    ]
     output: list[dict[str, str]] = []
     ok = 0
     failed = 0
