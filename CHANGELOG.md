@@ -6,6 +6,10 @@
   empty DNS labels, and other malformed hostnames are rejected (`CLK001`).
   Valid DNS names and IP literals continue to be accepted.
 - Declared and CI-tested Python 3.13 support alongside 3.10–3.12.
+- Added cross-link placement-ID consistency checks (`CLK116`) so the same
+  `utm_content` value cannot label different campaigns or destinations within
+  one audit set. The same placement on different platforms remains allowed
+  when the campaign and destination match.
 
 ## 0.2.0 - 2026-07-30
 
