@@ -12,6 +12,22 @@ from .csvsafe import safe_row
 from .links import AuditResult, Issue
 
 
+def _code_summary(result: AuditResult) -> list[tuple[str, int, int]]:
+    """Aggregate issues into sorted (code, error_count, warning_count) tuples."""
+    counts: dict[str, list[int]] = {}
+    for issue in result.issues:
+        if issue.code not in counts:
+            counts[issue.code] = [0, 0]
+        if issue.severity == "error":
+            counts[issue.code][0] += 1
+        else:
+            counts[issue.code][1] += 1
+    return sorted(
+        ((code, errs, warns) for code, (errs, warns) in counts.items()),
+        key=lambda item: (-(item[1] + item[2]), item[0]),
+    )
+
+
 def issue_dict(issue: Issue) -> dict[str, object]:
     return {
         "row": issue.row,
@@ -24,8 +40,13 @@ def issue_dict(issue: Issue) -> dict[str, object]:
 
 
 def to_json(result: AuditResult) -> str:
+    by_code = {
+        code: {"errors": errs, "warnings": warns}
+        for code, errs, warns in _code_summary(result)
+    }
     return json.dumps(
         {
+            "by_code": by_code,
             "checked": result.checked,
             "clean": result.clean,
             "errors": len(result.errors),
@@ -64,6 +85,11 @@ def to_text(result: AuditResult) -> str:
         f"{result.checked} links checked: {result.clean} clean, "
         f"{len(result.errors)} error(s), {len(result.warnings)} warning(s)"
     )
+    summary = _code_summary(result)
+    if summary:
+        lines.append("By rule code:")
+        for code, errs, warns in summary:
+            lines.append(f"  {code}: {errs} error(s), {warns} warning(s)")
     return "\n".join(lines)
 
 
@@ -86,8 +112,14 @@ def to_html(result: AuditResult) -> str:
         "body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; "
         "line-height: 1.45; margin: 1.5rem; max-width: 52rem; }",
         "h1 { font-size: 1.35rem; margin-bottom: 0.25rem; }",
+        "h2 { font-size: 1.1rem; margin: 1.25rem 0 0.5rem; }",
         ".summary { margin: 1rem 0 1.5rem; padding: 0.75rem 1rem; "
         "border: 1px solid #ccc; border-radius: 0.4rem; }",
+        ".code-summary table { border-collapse: collapse; width: auto; "
+        "margin: 0.5rem 0 1.25rem; }",
+        ".code-summary th, .code-summary td { border: 1px solid #ccc; "
+        "padding: 0.35rem 0.75rem; text-align: left; }",
+        ".code-summary th { font-weight: 600; }",
         ".row-block { margin-bottom: 1.25rem; }",
         ".row-url { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; "
         "font-size: 0.9rem; word-break: break-all; }",
@@ -96,6 +128,7 @@ def to_html(result: AuditResult) -> str:
         ".warning { color: #8a5a00; }",
         "@media (prefers-color-scheme: dark) {",
         "  .summary { border-color: #555; }",
+        "  .code-summary th, .code-summary td { border-color: #555; }",
         "  .error { color: #ff8a9b; }",
         "  .warning { color: #ffcc66; }",
         "}",
@@ -108,6 +141,25 @@ def to_html(result: AuditResult) -> str:
         f"{len(result.errors)} error(s), {len(result.warnings)} warning(s)",
         "</p>",
     ]
+
+    code_rows = _code_summary(result)
+    if code_rows:
+        parts.extend(
+            [
+                '<section class="code-summary" aria-label="Issues by rule code">',
+                "<h2>By rule code</h2>",
+                "<table>",
+                '<thead><tr><th scope="col">Code</th>'
+                '<th scope="col">Errors</th>'
+                '<th scope="col">Warnings</th></tr></thead>',
+                "<tbody>",
+            ]
+        )
+        for code, errs, warns in code_rows:
+            parts.append(
+                f"<tr><td>{html.escape(code)}</td><td>{errs}</td><td>{warns}</td></tr>"
+            )
+        parts.extend(["</tbody>", "</table>", "</section>"])
 
     if not result.issues:
         parts.append("<p>No issues found.</p>")
