@@ -12,6 +12,17 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from .config import Convention, domain_is_owned
 from .urls import authority_error as _authority_error
 
+# Canonical UTM keys recognized by GA4 and most analytics tools.
+# Typos (utm_souce, utm-source, UTM_Source) are ignored silently by GA4.
+_STANDARD_UTM_KEYS = (
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "utm_id",
+)
+
 # Case-insensitive exact matches for values that almost always indicate an
 # unfilled template, CMS default, or programming null rather than a real
 # campaign dimension. Keeping the set tight avoids false positives on
@@ -224,6 +235,32 @@ def validate_url(url: str, convention: Convention) -> list[Issue]:
         )
 
     pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    # Near-miss keys that look like UTMs but are not the canonical forms.
+    # GA4 ignores unknown parameter names, so these produce silent data loss.
+    for key, _value in pairs:
+        normalized = key.lower().replace("-", "_")
+        if key in _STANDARD_UTM_KEYS:
+            continue
+        if normalized in _STANDARD_UTM_KEYS or (
+            key.lower().startswith("utm")
+            and get_close_matches(normalized, _STANDARD_UTM_KEYS, n=1, cutoff=0.75)
+        ):
+            suggestion = get_close_matches(
+                normalized, list(_STANDARD_UTM_KEYS), n=1, cutoff=0.5
+            )
+            hint = f"; did you mean {suggestion[0]!r}?" if suggestion else ""
+            issues.append(
+                Issue(
+                    "CLK114",
+                    "error",
+                    (
+                        f"query parameter {key!r} looks like a misspelled UTM key"
+                        f"{hint}; GA4 ignores unknown parameter names"
+                    ),
+                    parameter=key,
+                )
+            )
+
     utm_pairs = [(key, value) for key, value in pairs if key.startswith("utm_")]
     if not utm_pairs:
         issues.append(Issue("CLK004", "warning", "URL has no UTM parameters"))
