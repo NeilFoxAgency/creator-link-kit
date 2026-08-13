@@ -319,5 +319,58 @@ class PlaceholderUtmValueTests(unittest.TestCase):
         self.assertNotIn("CLK115", {issue.code for issue in issues})
 
 
+class MisspelledUtmKeyTests(unittest.TestCase):
+    def test_typo_utm_souce(self) -> None:
+        convention = convention_from_dict(starter_convention())
+        url = (
+            "https://shop.example.com/product"
+            "?utm_souce=youtube&utm_medium=influencer&utm_campaign=cmp-x"
+        )
+        codes = {issue.code for issue in validate_url(url, convention)}
+        self.assertIn("CLK114", codes)
+
+    def test_hyphenated_utm_source(self) -> None:
+        convention = convention_from_dict(starter_convention())
+        url = (
+            "https://shop.example.com/product"
+            "?utm-source=youtube&utm_medium=influencer&utm_campaign=cmp-x"
+        )
+        issues = [i for i in validate_url(url, convention) if i.code == "CLK114"]
+        self.assertEqual(len(issues), 1)
+        self.assertIn("utm_source", issues[0].message)
+
+    def test_wrong_case_utm_key(self) -> None:
+        convention = convention_from_dict(starter_convention())
+        url = (
+            "https://shop.example.com/product"
+            "?UTM_SOURCE=youtube&utm_medium=influencer&utm_campaign=cmp-x"
+            "&utm_id=cmp-x&utm_content=plc-1"
+        )
+        codes = {issue.code for issue in validate_url(url, convention)}
+        self.assertIn("CLK114", codes)
+
+    def test_correct_keys_no_clk114(self) -> None:
+        convention = convention_from_dict(starter_convention())
+        url = (
+            "https://shop.example.com/product"
+            "?utm_source=youtube&utm_medium=influencer"
+            "&utm_campaign=cmp-glowdrop-launch&utm_id=cmp-glowdrop-launch"
+            "&utm_content=plc-greta-video-01"
+        )
+        codes = {issue.code for issue in validate_url(url, convention)}
+        self.assertNotIn("CLK114", codes)
+
+    def test_unrelated_query_key_not_flagged(self) -> None:
+        convention = convention_from_dict(starter_convention())
+        url = (
+            "https://shop.example.com/product"
+            "?ref=newsletter&utm_source=youtube&utm_medium=influencer"
+            "&utm_campaign=cmp-glowdrop-launch&utm_id=cmp-glowdrop-launch"
+            "&utm_content=plc-greta-video-01"
+        )
+        codes = {issue.code for issue in validate_url(url, convention)}
+        self.assertNotIn("CLK114", codes)
+
+
 if __name__ == "__main__":
     unittest.main()

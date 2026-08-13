@@ -463,6 +463,7 @@ is at `.github/workflows/example-audit.yml`.
 | `CLK109` | error | Value is empty |
 | `CLK110` | error | One `utm_campaign` is paired with multiple `utm_id` values |
 | `CLK111` | error | One `utm_id` is paired with multiple campaign names |
+| `CLK114` | error | Query key looks like a misspelled UTM parameter name |
 | `CLK115` | error | Value is a reserved or placeholder string (`null`, `n/a`, `test`, …) |
 | `CLK116` | error | One `utm_content` is paired with multiple campaigns or destinations |
 
