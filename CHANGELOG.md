@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added a **by rule code** summary (per-code error and warning counts) to
+  audit text, HTML, and JSON reports so large placement audits are easier
+  to triage.
 - Hardened URL authority validation so empty hosts, spaces, underscores,
   empty DNS labels, and other malformed hostnames are rejected (`CLK001`).
   Valid DNS names and IP literals continue to be accepted.
