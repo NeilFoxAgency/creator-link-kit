@@ -76,6 +76,42 @@ class LinkTests(unittest.TestCase):
         )
         self.assertEqual(sum(i.code == "CLK102" for i in issues), 4)
 
+    def test_html_entity_amp_in_query(self):
+        # CMS/email paste: first separator real, later ones entity-encoded
+        url = (
+            "https://shop.example.com/product?utm_source=youtube"
+            "&utm_medium=influencer&utm_campaign=cmp-spring-launch"
+            "&utm_id=cmp-spring-launch&utm_content=plc-greta-01"
+        )
+        issues = validate_url(url, self.convention)
+        codes = {issue.code for issue in issues}
+        self.assertIn("CLK117", codes)
+        entity_issue = next(i for i in issues if i.code == "CLK117")
+        self.assertEqual(entity_issue.severity, "error")
+        self.assertIn("&", entity_issue.message)
+
+    def test_html_entity_numeric_amp_in_query(self):
+        url = (
+            "https://shop.example.com/product?utm_source=youtube"
+            "&#38;utm_medium=influencer&utm_campaign=cmp-spring-launch"
+            "&utm_id=cmp-spring-launch&utm_content=plc-greta-01"
+        )
+        issues = validate_url(url, self.convention)
+        self.assertTrue(any(i.code == "CLK117" for i in issues))
+
+    def test_clean_query_has_no_clk117(self):
+        issues = validate_url(self.tagged_url(), self.convention)
+        self.assertFalse(any(i.code == "CLK117" for i in issues))
+
+    def test_audit_surfaces_html_entity_corruption(self):
+        dirty = (
+            "https://shop.example.com/product?utm_source=youtube"
+            "&utm_medium=influencer&utm_campaign=cmp-spring-launch"
+            "&utm_id=cmp-spring-launch&utm_content=plc-greta-01"
+        )
+        result = audit_urls([self.tagged_url(), dirty], self.convention)
+        self.assertTrue(any(i.code == "CLK117" for i in result.errors))
+
     def test_repeated_parameter(self):
         url = self.tagged_url() + "&utm_source=tiktok"
         issues = validate_url(url, self.convention)
