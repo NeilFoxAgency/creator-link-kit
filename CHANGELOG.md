@@ -2,9 +2,6 @@
 
 ## Unreleased
 
-- Added **CLK114** audit detection for misspelled UTM parameter names
-  (`utm_souce`, `utm-source`, `UTM_SOURCE`, and close variants). GA4 ignores
-  unknown keys, so these typos previously produced silent attribution loss.
 - Added a **by rule code** summary (per-code error and warning counts) to
   audit text, HTML, and JSON reports so large placement audits are easier
   to triage.
