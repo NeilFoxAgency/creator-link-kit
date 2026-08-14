@@ -153,6 +153,18 @@ def validate_params(
         if value == "":
             issues.append(Issue("CLK109", "error", "value is empty", key))
             continue
+        if value.strip() == "":
+            issues.append(Issue("CLK113", "error", "value is whitespace-only", key))
+            continue
+        if value != value.strip():
+            issues.append(
+                Issue(
+                    "CLK113",
+                    "error",
+                    "value has leading or trailing whitespace",
+                    key,
+                )
+            )
         if _UNRESOLVED_TEMPLATE.search(value) is not None:
             issues.append(
                 Issue(
