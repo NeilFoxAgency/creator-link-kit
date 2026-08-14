@@ -56,6 +56,16 @@ _PLACEHOLDER_UTM_VALUES = frozenset(
     }
 )
 
+# Common unresolved ad-platform / CMS template markers that ship as literal
+# query values when a macro is never expanded. Matching is intentionally narrow
+# so ordinary product SKUs and placement IDs are not false positives.
+_UNRESOLVED_TEMPLATE = re.compile(
+    r"(\{\{[^}]*\}\}"
+    r"|\$\{[^}]*\}"
+    r"|%\{[^}]*\}%"
+    r"|\[\[[^\]]*\]\])"
+)
+
 # HTML entity forms that appear when a real query separator (&) is copied from
 # CMS/email HTML, Word, or a rendered page source. GA4 never sees the intended
 # separate parameters because the URL is not decoded as HTML before use.
@@ -143,6 +153,19 @@ def validate_params(
         if value == "":
             issues.append(Issue("CLK109", "error", "value is empty", key))
             continue
+        if _UNRESOLVED_TEMPLATE.search(value) is not None:
+            issues.append(
+                Issue(
+                    "CLK112",
+                    "error",
+                    (
+                        f"{value!r} contains an unresolved template placeholder; "
+                        "expand the macro before publishing or the literal "
+                        "placeholder will appear in analytics"
+                    ),
+                    key,
+                )
+            )
         if value.strip().lower() in _PLACEHOLDER_UTM_VALUES:
             issues.append(
                 Issue(
