@@ -10,7 +10,12 @@ class UnresolvedTemplateTests(unittest.TestCase):
         self.convention = convention_from_dict(starter_convention())
 
     def test_common_template_forms_are_clk112(self):
-        for value in ("{{paid_social}}", "${SOURCE}", "%{campaign}%", "[[CREATOR]]"):
+        for value in (
+            "{{paid_social}}",
+            "${SOURCE}",
+            "%{campaign}%",
+            "[[CREATOR]]",
+        ):
             with self.subTest(value=value):
                 issues = validate_params(
                     {
@@ -33,7 +38,10 @@ class UnresolvedTemplateTests(unittest.TestCase):
             f"&utm_medium={encoded}&utm_campaign=cmp-spring-launch"
             "&utm_id=cmp-spring-launch&utm_content=plc-greta-01"
         )
-        self.assertIn("CLK112", {issue.code for issue in validate_url(url, self.convention)})
+        self.assertIn(
+            "CLK112",
+            {issue.code for issue in validate_url(url, self.convention)},
+        )
 
     def test_build_rejects_unresolved_template(self):
         params = {
