@@ -170,8 +170,25 @@ def batch_csv(
         reader = csv.DictReader(handle)
         if not reader.fieldnames:
             raise ValueError("roster CSV has no header")
-        rows, summary = generate_rows(reader, convention)
-        fieldnames = list(reader.fieldnames)
+        raw_fieldnames = list(reader.fieldnames)
+        if any(name is None or not name.strip() for name in raw_fieldnames):
+            raise ValueError("roster CSV has a blank header")
+        fieldnames = [name.strip() for name in raw_fieldnames]
+        duplicate_headers = sorted(
+            name for name, count in Counter(fieldnames).items() if count > 1
+        )
+        if duplicate_headers:
+            raise ValueError(
+                "roster CSV has duplicate header(s): " + ", ".join(duplicate_headers)
+            )
+        reader.fieldnames = fieldnames
+        source_rows = list(reader)
+        for row_number, row in enumerate(source_rows, start=2):
+            if None in row:
+                raise ValueError(
+                    f"roster CSV row {row_number} has more values than headers"
+                )
+        rows, summary = generate_rows(source_rows, convention)
 
     extras = ["generated_url"]
     if convention.batch.discount_code_template:
