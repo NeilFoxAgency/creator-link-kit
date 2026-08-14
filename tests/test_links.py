@@ -80,7 +80,7 @@ class LinkTests(unittest.TestCase):
         # CMS/email paste: first separator real, later ones entity-encoded
         url = (
             "https://shop.example.com/product?utm_source=youtube"
-            "&utm_medium=influencer&utm_campaign=cmp-spring-launch"
+            "&amp;utm_medium=influencer&utm_campaign=cmp-spring-launch"
             "&utm_id=cmp-spring-launch&utm_content=plc-greta-01"
         )
         issues = validate_url(url, self.convention)
@@ -88,7 +88,7 @@ class LinkTests(unittest.TestCase):
         self.assertIn("CLK117", codes)
         entity_issue = next(i for i in issues if i.code == "CLK117")
         self.assertEqual(entity_issue.severity, "error")
-        self.assertIn("&", entity_issue.message)
+        self.assertIn("&amp;", entity_issue.message)
 
     def test_html_entity_numeric_amp_in_query(self):
         url = (
@@ -106,7 +106,7 @@ class LinkTests(unittest.TestCase):
     def test_audit_surfaces_html_entity_corruption(self):
         dirty = (
             "https://shop.example.com/product?utm_source=youtube"
-            "&utm_medium=influencer&utm_campaign=cmp-spring-launch"
+            "&amp;utm_medium=influencer&utm_campaign=cmp-spring-launch"
             "&utm_id=cmp-spring-launch&utm_content=plc-greta-01"
         )
         result = audit_urls([self.tagged_url(), dirty], self.convention)
