@@ -56,6 +56,16 @@ _PLACEHOLDER_UTM_VALUES = frozenset(
     }
 )
 
+# HTML entity forms that appear when a real query separator (&) is copied from
+# CMS/email HTML, Word, or a rendered page source. GA4 never sees the intended
+# separate parameters because the URL is not decoded as HTML before use.
+_HTML_ENTITY_QUERY_MARKERS = (
+    "&amp;",
+    "&#38;",
+    "&#x26;",
+    "&AMP;",
+)
+
 
 @dataclass(frozen=True)
 class Issue:
@@ -203,6 +213,27 @@ def validate_params(
 
 def validate_url(url: str, convention: Convention) -> list[Issue]:
     issues: list[Issue] = []
+
+    # Scan the raw URL first. Numeric entities such as &#38; contain '#' and
+    # would be treated as the start of a fragment by urlsplit, hiding the rest
+    # of the query from parse_qsl. Named entities like &amp; stay in the query
+    # string but still prevent proper UTM separation.
+    for marker in _HTML_ENTITY_QUERY_MARKERS:
+        if marker in url:
+            issues.append(
+                Issue(
+                    "CLK117",
+                    "error",
+                    (
+                        f"URL contains HTML entity {marker!r}; "
+                        "UTM parameters after this point are not separated "
+                        "for GA4 and similar tools. Replace with a bare '&'"
+                    ),
+                    url=url,
+                )
+            )
+            break
+
     try:
         parsed = urlsplit(url)
     except ValueError as exc:
