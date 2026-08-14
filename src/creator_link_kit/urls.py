@@ -64,7 +64,8 @@ def _trim_trailing_url_punctuation(value: str) -> str:
         previous = trimmed
         trimmed = trimmed.rstrip(_SIMPLE_TRAILING_PUNCT)
         for opener, closer in _PAIRED_PUNCT:
-            if trimmed.endswith(closer) and trimmed.count(closer) > trimmed.count(opener):
+            unmatched_closer = trimmed.count(closer) > trimmed.count(opener)
+            if trimmed.endswith(closer) and unmatched_closer:
                 trimmed = trimmed[:-1]
                 break
         if trimmed == previous:
