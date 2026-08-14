@@ -186,9 +186,17 @@ class LinkSpecification:
             raise TypeError("identifiers must be LinkIdentifiers")
         if not isinstance(self.audit, LinkAudit):
             raise TypeError("audit must be LinkAudit")
-        if not isinstance(self.config_version, int) or self.config_version < 1:
+        if (
+            not isinstance(self.config_version, int)
+            or isinstance(self.config_version, bool)
+            or self.config_version < 1
+        ):
             raise ValueError("config_version must be a positive integer")
-        if not isinstance(self.schema_version, int) or self.schema_version < 1:
+        if (
+            not isinstance(self.schema_version, int)
+            or isinstance(self.schema_version, bool)
+            or self.schema_version < 1
+        ):
             raise ValueError("schema_version must be a positive integer")
         if self.config_fingerprint is not None:
             if not isinstance(self.config_fingerprint, str) or not re.fullmatch(
