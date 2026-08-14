@@ -22,6 +22,7 @@ from .qr import (
 )
 from .report import to_csv, to_html, to_json, to_text
 from .spec import build_link_specification
+from .urls import extract_http_urls
 
 
 def _param(value: str) -> tuple[str, str]:
@@ -57,7 +58,7 @@ def _read_audit_urls(path: Path, url_column: str | None) -> list[str]:
                 )
             # Ragged rows yield None for the URL column; treat as blank.
             return [(row.get(column) or "") for row in reader]
-    return [line.strip() for line in path.read_text(encoding="utf-8").splitlines()]
+    return extract_http_urls(path.read_text(encoding="utf-8"))
 
 
 def _add_identifier_arguments(parser: argparse.ArgumentParser) -> None:
@@ -102,7 +103,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     audit_parser = subparsers.add_parser("audit", help="audit links from CSV or text")
     audit_parser.add_argument("--config", required=True)
-    audit_parser.add_argument("--input", required=True)
+    audit_parser.add_argument(
+        "--input",
+        required=True,
+        help=(
+            "CSV of links, or a text file with one URL per line, or free-form "
+            "prose containing absolute http(s) URLs"
+        ),
+    )
     audit_parser.add_argument("--url-column")
     audit_parser.add_argument(
         "--format", choices=("text", "json", "csv", "html"), default="text"

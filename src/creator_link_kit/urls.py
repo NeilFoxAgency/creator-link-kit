@@ -1,4 +1,4 @@
-"""Shared URL authority validation helpers."""
+"""Shared URL authority validation and extraction helpers."""
 
 from __future__ import annotations
 
@@ -9,6 +9,13 @@ from urllib.parse import SplitResult
 # DNS label: letters/digits, optional interior hyphen; not empty.
 _DNS_LABEL = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
 _MAX_HOSTNAME_LEN = 253
+
+# Absolute http(s) URLs only. The match is deliberately conservative: it stops
+# at whitespace, HTML angle brackets, and quotes. Sentence punctuation is
+# trimmed after matching so pasted prose remains useful without inventing URLs.
+_HTTP_URL_RE = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
+_SIMPLE_TRAILING_PUNCT = ".,;:!?"
+_PAIRED_PUNCT = (("(", ")"), ("[", "]"), ("{", "}"))
 
 
 def _is_valid_hostname(host: str) -> bool:
@@ -49,3 +56,34 @@ def authority_error(parsed: SplitResult) -> str | None:
     if not _is_valid_hostname(host):
         return f"URL has a malformed hostname: {host!r}"
     return None
+
+
+def _trim_trailing_url_punctuation(value: str) -> str:
+    trimmed = value
+    while trimmed:
+        previous = trimmed
+        trimmed = trimmed.rstrip(_SIMPLE_TRAILING_PUNCT)
+        for opener, closer in _PAIRED_PUNCT:
+            unmatched_closer = trimmed.count(closer) > trimmed.count(opener)
+            if trimmed.endswith(closer) and unmatched_closer:
+                trimmed = trimmed[:-1]
+                break
+        if trimmed == previous:
+            break
+    return trimmed
+
+
+def extract_http_urls(text: str) -> list[str]:
+    """Extract absolute http(s) URLs from free-form text in appearance order.
+
+    Exact duplicates are retained so the audit layer can still report CLK005.
+    Unmatched prose punctuation is removed, while balanced parentheses,
+    brackets, and braces that are part of a URL are preserved.
+    """
+
+    found: list[str] = []
+    for match in _HTTP_URL_RE.finditer(text):
+        candidate = _trim_trailing_url_punctuation(match.group(0))
+        if candidate:
+            found.append(candidate)
+    return found
