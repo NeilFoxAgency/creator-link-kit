@@ -55,6 +55,33 @@ class Convention:
     batch: BatchConfig
 
 
+_TOP_LEVEL_KEYS = frozenset(
+    {
+        "version",
+        "base_url",
+        "owned_domains",
+        "mode",
+        "casing",
+        "max_value_length",
+        "required",
+        "parameters",
+        "defaults",
+        "batch",
+    }
+)
+_PARAMETER_RULE_KEYS = frozenset({"allowed", "pattern"})
+_BATCH_KEYS = frozenset(
+    {
+        "param_map",
+        "url_column",
+        "id_columns",
+        "discount_code_template",
+        "discount_code_pattern",
+        "discount_code_column",
+    }
+)
+
+
 def _expect_mapping(value: Any, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ConfigError(f"{label} must be an object")
@@ -65,6 +92,14 @@ def _expect_string(value: Any, label: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ConfigError(f"{label} must be a non-empty string")
     return value.strip()
+
+
+def _reject_unknown_keys(
+    value: dict[str, Any], allowed: frozenset[str], label: str
+) -> None:
+    unknown = sorted(repr(key) for key in set(value) - allowed)
+    if unknown:
+        raise ConfigError(f"{label} contains unknown key(s): {', '.join(unknown)}")
 
 
 def _normalize_owned_domain(value: str) -> str:
@@ -124,8 +159,10 @@ def _load_raw(path: Path) -> dict[str, Any]:
 
 
 def convention_from_dict(raw: dict[str, Any]) -> Convention:
+    _reject_unknown_keys(raw, _TOP_LEVEL_KEYS, "config")
+
     version = raw.get("version")
-    if version != 1:
+    if isinstance(version, bool) or version != 1:
         raise ConfigError("version must be 1")
 
     base_url = _expect_string(raw.get("base_url"), "base_url")
@@ -165,7 +202,11 @@ def convention_from_dict(raw: dict[str, Any]) -> Convention:
         raise ConfigError("casing must be 'lowercase' or 'any'")
 
     max_value_length = raw.get("max_value_length", 80)
-    if not isinstance(max_value_length, int) or max_value_length < 1:
+    if (
+        not isinstance(max_value_length, int)
+        or isinstance(max_value_length, bool)
+        or max_value_length < 1
+    ):
         raise ConfigError("max_value_length must be a positive integer")
 
     params_raw = _expect_mapping(raw.get("parameters", {}), "parameters")
@@ -174,6 +215,7 @@ def convention_from_dict(raw: dict[str, Any]) -> Convention:
         if not isinstance(key, str) or not key.startswith("utm_"):
             raise ConfigError(f"parameter key {key!r} must start with 'utm_'")
         rule_raw = _expect_mapping(rule_value, f"parameters.{key}")
+        _reject_unknown_keys(rule_raw, _PARAMETER_RULE_KEYS, f"parameters.{key}")
         allowed_raw = rule_raw.get("allowed", [])
         if not isinstance(allowed_raw, list) or not all(
             isinstance(item, str) and item != "" for item in allowed_raw
@@ -217,6 +259,7 @@ def convention_from_dict(raw: dict[str, Any]) -> Convention:
         defaults[key] = value
 
     batch_raw = _expect_mapping(raw.get("batch", {}), "batch")
+    _reject_unknown_keys(batch_raw, _BATCH_KEYS, "batch")
     param_map_raw = _expect_mapping(batch_raw.get("param_map", {}), "batch.param_map")
     param_map: dict[str, str] = {}
     for key, value in param_map_raw.items():
