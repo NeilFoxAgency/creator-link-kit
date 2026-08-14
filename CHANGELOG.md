@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Added free-form text URL extraction for `clk audit`: absolute HTTP(S) links can
+  now be audited directly from pasted descriptions or notes, with duplicates
+  retained for `CLK005` and unmatched sentence punctuation trimmed safely.
+- Tightened convention parsing so unknown top-level, parameter-rule, and batch
+  keys fail closed instead of being silently ignored; boolean values are also
+  rejected where integer version and length fields are required.
+- Reject ambiguous roster CSV shapes with blank or duplicate headers or surplus
+  row values, while preserving the existing short-row fallback behavior.
+- Added **CLK113** errors for whitespace-only UTM values and values with leading
+  or trailing whitespace.
+- Added **CLK112** errors for unresolved template placeholders such as
+  `{{paid_social}}`, `${SOURCE}`, `%{campaign}%`, and `[[CREATOR]]`.
 - Added **CLK117** detection for HTML-entity-corrupted query strings
   (`&amp;`, `&#38;`, `&#x26;`). Links copied from CMS pages, email HTML, or
   Word often retain these entities; GA4 never splits the intended UTM pairs.

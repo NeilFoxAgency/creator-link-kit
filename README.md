@@ -277,6 +277,9 @@ The four recognized identifier names are fixed intentionally:
 `brand_id`, `campaign_id`, `creator_id`, and `placement_id`. This whitelist keeps
 arbitrary roster data out of link specifications.
 
+Convention objects fail closed on unknown top-level, parameter-rule, and batch
+keys so misspelled policy fields are not silently ignored.
+
 YAML also works when the optional dependency is installed.
 
 ## Production and development modes
@@ -392,6 +395,11 @@ For CSV input, the CLI automatically looks for common URL columns including
 `generated_url`, `url`, `link`, `landing_url`, and `destination_url`. Use
 `--url-column` to override detection.
 
+For non-CSV text, the CLI also extracts absolute HTTP(S) URLs from free-form
+prose such as a YouTube description. Exact duplicate URLs remain in the audit
+so `CLK005` can flag them, while unmatched trailing sentence punctuation is
+trimmed without removing balanced parentheses, brackets, or braces in a URL.
+
 Warnings do not fail the command unless `--strict` is supplied. Errors always
 produce exit code 1. Across an audit set, `CLK110` rejects one `utm_campaign`
 paired with multiple `utm_id` values, `CLK111` rejects one `utm_id` reused
@@ -463,10 +471,12 @@ is at `.github/workflows/example-audit.yml`.
 | `CLK109` | error | Value is empty |
 | `CLK110` | error | One `utm_campaign` is paired with multiple `utm_id` values |
 | `CLK111` | error | One `utm_id` is paired with multiple campaign names |
+| `CLK112` | error | Value contains an unresolved template placeholder or macro |
+| `CLK113` | error | Value is whitespace-only or has leading/trailing whitespace |
 | `CLK114` | error | Query key looks like a misspelled UTM parameter name |
 | `CLK115` | error | Value is a reserved or placeholder string (`null`, `n/a`, `test`, …) |
 | `CLK116` | error | One `utm_content` is paired with multiple campaigns or destinations |
-| `CLK117` | error | Query string still contains HTML entities (`&`, `&#38;`, …) so UTM pairs are not split |
+| `CLK117` | error | Query string still contains HTML entities (`&amp;`, `&#38;`, …) so UTM pairs are not split |
 
 Batch duplicate-placement failures are reported in the row's `issues` field
 before URL generation and do not receive a `CLK` code because they concern the
