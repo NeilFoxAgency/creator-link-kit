@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Reusable GitHub Action now writes a **by rule code** markdown table (error and
+  warning counts per CLK code) to the Actions job summary so operators can
+  triage dominant failure modes without downloading logs.
 - Added free-form text URL extraction for `clk audit`: absolute HTTP(S) links can
   now be audited directly from pasted descriptions or notes, with duplicates
   retained for `CLK005` and unmatched sentence punctuation trimmed safely.
