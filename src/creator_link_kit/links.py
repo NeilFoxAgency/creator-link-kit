@@ -76,6 +76,14 @@ _HTML_ENTITY_QUERY_MARKERS = (
     "&AMP;",
 )
 
+# UTM-looking key=value pairs that were placed in the fragment. Anything after
+# # is not sent to the server or to GA4 measurement; these links look tracked
+# but attribute as direct/none.
+_FRAGMENT_UTM_PAIR = re.compile(
+    r"(?:^|[?#&])utm_(?:source|medium|campaign|term|content|id)=",
+    re.IGNORECASE,
+)
+
 
 @dataclass(frozen=True)
 class Issue:
@@ -297,6 +305,24 @@ def validate_url(url: str, convention: Convention) -> list[Issue]:
                 "CLK003",
                 severity,
                 f"destination host {parsed.hostname!r} is outside owned_domains",
+            )
+        )
+
+    # UTM keys in the fragment never reach the server or GA4. SPA/CMS links
+    # often put tracking after # by mistake; the link looks tagged but
+    # attributes as direct/none.
+    if parsed.fragment and _FRAGMENT_UTM_PAIR.search(parsed.fragment):
+        issues.append(
+            Issue(
+                "CLK118",
+                "error",
+                (
+                    "UTM parameters appear in the URL fragment (#...); "
+                    "browsers and GA4 do not send the fragment to the server, "
+                    "so attribution is lost. Move UTM parameters into the "
+                    "query string before the fragment"
+                ),
+                url=url,
             )
         )
 
