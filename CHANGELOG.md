@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added **CLK118** detection for UTM parameters placed in the URL fragment
+  (`#...`). Browsers and GA4 never send the fragment to the server, so these
+  links attribute as direct/none despite looking tracked. Innocent SPA hashes
+  without UTM keys are not flagged.
 - Added free-form text URL extraction for `clk audit`: absolute HTTP(S) links can
   now be audited directly from pasted descriptions or notes, with duplicates
   retained for `CLK005` and unmatched sentence punctuation trimmed safely.
