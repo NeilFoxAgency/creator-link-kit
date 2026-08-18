@@ -74,11 +74,92 @@ runs:
         CLK_STRICT: ${{ inputs.strict }}
       run: |
         set -euo pipefail
-        ARGS=(audit --config "$CLK_CONFIG" --input "$CLK_INPUT" --format "$CLK_FORMAT")
+        JSON_OUT="$(mktemp)"
+        trap 'rm -f "$JSON_OUT"' EXIT
+
+        # Always capture structured JSON for the job summary (by_code totals).
+        JSON_ARGS=(audit --config "$CLK_CONFIG" --input "$CLK_INPUT" --format json --out "$JSON_OUT")
         if [ -n "$CLK_URL_COLUMN" ]; then
-          ARGS+=(--url-column "$CLK_URL_COLUMN")
+          JSON_ARGS+=(--url-column "$CLK_URL_COLUMN")
         fi
         if [ "$CLK_STRICT" = "true" ]; then
-          ARGS+=(--strict)
+          JSON_ARGS+=(--strict)
         fi
-        clk "${ARGS[@]}"
+
+        set +e
+        clk "${JSON_ARGS[@]}"
+        EXIT_CODE=$?
+        set -e
+
+        # Publish a compact by-rule-code table to the Actions job summary.
+        if [ -f "$JSON_OUT" ] && [ -s "$JSON_OUT" ]; then
+          python - "$JSON_OUT" <<'PY'
+        import json
+        import os
+        import sys
+
+        path = sys.argv[1]
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+
+        checked = data.get("checked", 0)
+        clean = data.get("clean", 0)
+        errors = data.get("errors", 0)
+        warnings = data.get("warnings", 0)
+        by_code = data.get("by_code") or {}
+
+        lines = [
+            "## Creator Link Kit audit",
+            "",
+            f"{checked} links checked: **{clean}** clean, **{errors}** error(s), **{warnings}** warning(s)",
+            "",
+        ]
+        if by_code:
+            lines.extend(
+                [
+                    "### By rule code",
+                    "",
+                    "| Code | Errors | Warnings |",
+                    "| --- | ---: | ---: |",
+                ]
+            )
+            # Sort by total issues descending, then code name.
+            rows = sorted(
+                by_code.items(),
+                key=lambda item: (-(item[1].get("errors", 0) + item[1].get("warnings", 0)), item[0]),
+            )
+            for code, counts in rows:
+                lines.append(
+                    f"| `{code}` | {counts.get('errors', 0)} | {counts.get('warnings', 0)} |"
+                )
+            lines.append("")
+        else:
+            lines.append("No issues found.")
+            lines.append("")
+
+        summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+        if summary_path:
+            with open(summary_path, "a", encoding="utf-8") as handle:
+                handle.write("\n".join(lines))
+                handle.write("\n")
+        else:
+            # Local or non-Actions runs still print the summary block.
+            print("\n".join(lines), file=sys.stderr)
+        PY
+        fi
+
+        # Emit the operator-selected format to the step log (and preserve exit).
+        DISPLAY_ARGS=(audit --config "$CLK_CONFIG" --input "$CLK_INPUT" --format "$CLK_FORMAT")
+        if [ -n "$CLK_URL_COLUMN" ]; then
+          DISPLAY_ARGS+=(--url-column "$CLK_URL_COLUMN")
+        fi
+        if [ "$CLK_STRICT" = "true" ]; then
+          DISPLAY_ARGS+=(--strict)
+        fi
+        set +e
+        clk "${DISPLAY_ARGS[@]}"
+        DISPLAY_EXIT=$?
+        set -e
+
+        # Prefer the first audit's exit code (same inputs → same result).
+        exit "$EXIT_CODE"

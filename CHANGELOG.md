@@ -39,6 +39,9 @@
   `test`, `example`, `placeholder`, `tbd`, and related forms) with `CLK115`
   during build and audit so unfinished template or CMS defaults do not reach
   GA4 and similar tools.
+- Reusable GitHub Action now writes a **by rule code** markdown table (error and
+  warning counts per CLK code) to the Actions job summary so operators can
+  triage dominant failure modes without downloading logs.
 
 ## 0.2.0 - 2026-07-30
 

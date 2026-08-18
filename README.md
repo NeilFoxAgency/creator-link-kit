@@ -420,6 +420,9 @@ clk audit \
 CSV exports neutralize cells that begin with spreadsheet formula trigger
 characters. In-memory rows and JSON, text, and HTML output are not modified.
 
+Text, HTML, and JSON reports include a **by rule code** summary (error and
+warning counts per CLK code) so large placement audits are faster to triage.
+
 ## GitHub Action
 
 A reusable composite action is included so another repository can enforce the
@@ -448,8 +451,13 @@ same convention without hand-writing installation and CLI steps:
 | `python-version` | no | `3.12` | Python runtime for the action |
 | `version` | no | local or latest | Package version to install |
 
-The action uses the same exit codes as the CLI. The included example workflow
-is at `.github/workflows/example-audit.yml`.
+The action uses the same exit codes as the CLI. In addition, it always writes a
+compact **by rule code** markdown table (error and warning counts per CLK code)
+to the GitHub Actions job summary so operators can see the dominant failure
+modes without opening the full log. The selected `format` is still printed to
+the step log.
+
+The included example workflow is at `.github/workflows/example-audit.yml`.
 
 ## Rule codes
 
