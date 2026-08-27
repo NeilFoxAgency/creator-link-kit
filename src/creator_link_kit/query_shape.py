@@ -6,8 +6,7 @@ not a new query string; it is absorbed into a parameter value.
 
 from __future__ import annotations
 
-from .links import Issue
-
+CLK119_CODE = "CLK119"
 CLK119_MESSAGE = (
     "URL contains more than one '?' before the fragment; "
     "only the first '?' starts the query string, so later "
@@ -16,8 +15,7 @@ CLK119_MESSAGE = (
 )
 
 
-def extra_question_mark_issue(url: str) -> Issue | None:
+def has_extra_question_mark(url: str) -> bool:
+    """Return True when a second '?' appears before any fragment."""
     without_fragment = url.split("#", 1)[0]
-    if without_fragment.count("?") <= 1:
-        return None
-    return Issue("CLK119", "error", CLK119_MESSAGE, url=url)
+    return without_fragment.count("?") > 1
