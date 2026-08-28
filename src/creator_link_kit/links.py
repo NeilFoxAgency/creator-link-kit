@@ -3,18 +3,13 @@
 from __future__ import annotations
 
 import re
-from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from difflib import get_close_matches
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from .config import Convention, domain_is_owned
+from .config import Convention
 from .confusables import mixed_script_label
-from .urls import authority_error as _authority_error
 
-# Canonical UTM keys recognized by GA4 and most analytics tools.
-# Typos (utm_souce, utm-source, UTM_Source) are ignored silently by GA4.
 _STANDARD_UTM_KEYS = (
     "utm_source",
     "utm_medium",
@@ -60,7 +55,7 @@ _UNRESOLVED_TEMPLATE = re.compile(
 )
 
 _HTML_ENTITY_QUERY_MARKERS = (
-    "&",
+    "&amp;",
     "&#38;",
     "&#x26;",
     "&AMP;",
@@ -265,3 +260,25 @@ def validate_params(
                 )
             )
     return issues
+
+
+def validate_url(url: str, convention: Convention) -> list[Issue]:
+    from .links_audit import validate_url as _validate_url
+
+    return _validate_url(url, convention)
+
+
+def build_url(
+    base_url: str,
+    params: Mapping[str, str],
+    convention: Convention,
+) -> str:
+    from .links_audit import build_url as _build_url
+
+    return _build_url(base_url, params, convention)
+
+
+def audit_urls(urls: Iterable[str], convention: Convention) -> AuditResult:
+    from .links_audit import audit_urls as _audit_urls
+
+    return _audit_urls(urls, convention)
