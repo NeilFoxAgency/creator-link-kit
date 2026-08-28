@@ -442,7 +442,7 @@ same convention without hand-writing installation and CLI steps:
 ```
 
 | Input | Required | Default | Purpose |
-| --- | --- | --- | --- |
+| --- | --- | --- |
 | `config` | yes | - | Convention file path |
 | `input` | yes | - | CSV or text file containing links |
 | `url-column` | no | auto | CSV column containing the URL |
@@ -484,8 +484,9 @@ The included example workflow is at `.github/workflows/example-audit.yml`.
 | `CLK114` | error | Query key looks like a misspelled UTM parameter name |
 | `CLK115` | error | Value is a reserved or placeholder string (`null`, `n/a`, `test`, …) |
 | `CLK116` | error | One `utm_content` is paired with multiple campaigns or destinations |
-| `CLK117` | error | Query string still contains HTML entities (`&amp;`, `&#38;`, …) so UTM pairs are not split |
+| `CLK117` | error | Query string still contains HTML entities (`&`, `&#38;`, …) so UTM pairs are not split |
 | `CLK118` | error | UTM parameters appear in the URL fragment (`#...`); browsers and GA4 never send them |
+| `CLK122` | error | Key or value mixes Latin with Cyrillic/Greek lookalikes, fullwidth forms, or format marks |
 
 Batch duplicate-placement failures are reported in the row's `issues` field
 before URL generation and do not receive a `CLK` code because they concern the
