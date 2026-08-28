@@ -55,7 +55,7 @@ _UNRESOLVED_TEMPLATE = re.compile(
 )
 
 _HTML_ENTITY_QUERY_MARKERS = (
-    "&amp;",
+    "&",
     "&#38;",
     "&#x26;",
     "&AMP;",
@@ -279,6 +279,6 @@ def build_url(
 
 
 def audit_urls(urls: Iterable[str], convention: Convention) -> AuditResult:
-    from .links_audit import audit_urls as _audit_urls
+    from .links_set_audit import audit_urls as _audit_urls
 
     return _audit_urls(urls, convention)
