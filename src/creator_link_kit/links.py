@@ -54,11 +54,12 @@ _UNRESOLVED_TEMPLATE = re.compile(
     r"|\[\[[^\]]*\]\])"
 )
 
+# Concatenate so XML/HTML transport cannot collapse the named entities.
 _HTML_ENTITY_QUERY_MARKERS = (
-    "&",
+    "&" + "amp;",
     "&#38;",
     "&#x26;",
-    "&AMP;",
+    "&" + "AMP;",
 )
 
 _FRAGMENT_UTM_PAIR = re.compile(
