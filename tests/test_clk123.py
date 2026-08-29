@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import unittest
 
+from creator_link_kit import audit_urls
+from creator_link_kit.config import convention_from_dict, starter_convention
 from creator_link_kit.nested import find_nested_tracking
 
 
@@ -65,6 +67,17 @@ class NestedTrackingDetectorTests(unittest.TestCase):
             ]
         )
         self.assertEqual(len(findings), 1)
+
+    def test_package_audit_urls_emits_clk123(self) -> None:
+        convention = convention_from_dict(starter_convention())
+        dirty = (
+            "https://shop.example.com/product"
+            "?utm_source=youtube&utm_medium=influencer"
+            "&utm_campaign=cmp-spring-launch&utm_id=cmp-spring-launch"
+            "&utm_content=https://othershop.example.net/deal"
+        )
+        result = audit_urls([dirty], convention)
+        self.assertTrue(any(issue.code == "CLK123" for issue in result.errors))
 
 
 if __name__ == "__main__":
