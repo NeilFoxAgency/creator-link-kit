@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added **CLK123** detection for nested tracking: a UTM value that is itself a
+  URL, a UTM value that embeds another `utm_*` pair, or a wrapper parameter
+  (`redirect`, `next`, and similar) whose value is a destination that already
+  contains UTM tags. These links look tracked but store the wrapper in
+  analytics. Innocent `next=` URLs without UTM pairs are not flagged.
+
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes
