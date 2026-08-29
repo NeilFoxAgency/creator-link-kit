@@ -44,6 +44,8 @@ SHORTENER_ROOTS: tuple[str, ...] = (
     "a.co",
 )
 
+_INSTALLED = False
+
 
 def is_shortener_host(host: str) -> bool:
     """Return True when host is a known public shortener or a subdomain of one."""
@@ -74,3 +76,45 @@ def should_flag_shortener_utm(
         return False
     pairs = parse_qsl(parsed.query, keep_blank_values=True)
     return any(key.lower().startswith("utm_") for key, _ in pairs)
+
+
+def install_clk125() -> None:
+    """Wrap links.validate_url so CLK125 is visible on every audit path."""
+
+    global _INSTALLED
+    if _INSTALLED:
+        return
+
+    from . import links
+
+    original = links.validate_url
+
+    def validate_url_with_clk125(url: str, convention):
+        issues = original(url, convention)
+        if any(issue.code == "CLK125" for issue in issues):
+            return issues
+        owned = getattr(convention, "owned_domains", ()) or ()
+        if not should_flag_shortener_utm(url, owned_domains=tuple(owned)):
+            return issues
+        try:
+            host = urlsplit(url).hostname or ""
+        except ValueError:
+            host = ""
+        issues.append(
+            links.Issue(
+                "CLK125",
+                "error",
+                (
+                    f"UTM parameters are attached to shortener host "
+                    f"{host!r}; many shorteners strip or do not "
+                    "forward unknown query keys, so GA4 never sees the "
+                    "campaign. Put UTMs on the final owned destination, or "
+                    "configure forwarding on a first-party short domain"
+                ),
+                url=url,
+            )
+        )
+        return issues
+
+    links.validate_url = validate_url_with_clk125  # type: ignore[method-assign]
+    _INSTALLED = True
