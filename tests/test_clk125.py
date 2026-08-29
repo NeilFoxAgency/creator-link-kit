@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import unittest
 
+import creator_link_kit  # noqa: F401  — install CLK125 on links.validate_url
 from creator_link_kit.config import convention_from_dict, starter_convention
 from creator_link_kit.links import audit_urls, validate_url
 from creator_link_kit.shortener_utm import (
