@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import unittest
 
+import creator_link_kit
 from creator_link_kit.config import convention_from_dict, starter_convention
-from creator_link_kit.links import audit_urls, validate_url
+from creator_link_kit.links import audit_urls
+from creator_link_kit.query_delim import has_alt_utm_delimiter, validate_url
 
 
 class AltQueryDelimiterTests(unittest.TestCase):
@@ -18,6 +20,13 @@ class AltQueryDelimiterTests(unittest.TestCase):
             "?utm_source=youtube&utm_medium=influencer"
             "&utm_campaign=cmp-spring-launch&utm_id=cmp-spring-launch"
             "&utm_content=plc-greta-01"
+        )
+
+    def test_helper_detects_semicolon(self) -> None:
+        self.assertTrue(
+            has_alt_utm_delimiter(
+                "https://shop.example.com/p?utm_source=youtube;utm_medium=influencer"
+            )
         )
 
     def test_semicolon_separated_pairs_are_error(self) -> None:
@@ -59,6 +68,7 @@ class AltQueryDelimiterTests(unittest.TestCase):
         )
         issues = validate_url(url, self.convention)
         self.assertFalse(any(i.code == "CLK127" for i in issues))
+        self.assertFalse(has_alt_utm_delimiter(url))
 
     def test_ampersand_query_is_clean(self) -> None:
         issues = validate_url(self._clean(), self.convention)
@@ -67,6 +77,11 @@ class AltQueryDelimiterTests(unittest.TestCase):
     def test_uppercase_key_after_semicolon_is_flagged(self) -> None:
         url = "https://shop.example.com/offer?utm_source=youtube;UTM_MEDIUM=influencer"
         issues = validate_url(url, self.convention)
+        self.assertTrue(any(i.code == "CLK127" for i in issues))
+
+    def test_package_validate_url_is_wrapped(self) -> None:
+        url = "https://shop.example.com/offer?utm_source=youtube;utm_medium=influencer"
+        issues = creator_link_kit.validate_url(url, self.convention)
         self.assertTrue(any(i.code == "CLK127" for i in issues))
 
     def test_audit_surfaces_clk127(self) -> None:
