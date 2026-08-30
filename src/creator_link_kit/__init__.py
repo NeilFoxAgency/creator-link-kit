@@ -2,6 +2,7 @@
 
 from .config import ConfigError, Convention, convention_fingerprint, load_convention
 from .links import AuditResult, Issue, audit_urls, build_url, validate_url
+from .platform_utm import install_clk126
 from .models import (
     AuditIssue,
     LinkAudit,
@@ -12,6 +13,9 @@ from .models import (
     ProvisionedLink,
 )
 from .spec import build_link_specification
+
+install_clk126()
+from .links import validate_url as validate_url  # re-bind wrapped checker
 
 __all__ = [
     "AuditIssue",
