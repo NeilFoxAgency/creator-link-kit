@@ -11,7 +11,12 @@ from .models import (
     LinkSpecification,
     ProvisionedLink,
 )
+from .query_delim import install as _install_clk127
 from .spec import build_link_specification
+
+_install_clk127()
+
+from .links import validate_url  # noqa: F401,E402  # rebound after CLK127 install
 
 __all__ = [
     "AuditIssue",
