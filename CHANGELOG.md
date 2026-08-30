@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added **CLK127** detection for UTM pairs separated by `;` or `,` instead of
+  `&`. Spreadsheet formulas and older query styles produce links that look
+  tagged; `parse_qsl` and GA4 absorb later keys into the previous value.
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes
