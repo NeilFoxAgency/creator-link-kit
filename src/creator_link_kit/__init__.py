@@ -1,14 +1,8 @@
 """Creator Link Kit package."""
 
 from .config import ConfigError, Convention, convention_fingerprint, load_convention
-from .links import (
-    AuditResult,
-    Issue,
-    audit_urls,
-    build_url,
-    load_expected_placement_ids,
-    validate_url,
-)
+from .links import AuditResult, Issue, audit_urls, build_url, validate_url
+from .roster import load_expected_placement_ids
 from .models import (
     AuditIssue,
     LinkAudit,

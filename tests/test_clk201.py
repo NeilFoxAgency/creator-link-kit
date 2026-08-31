@@ -5,7 +5,7 @@ from pathlib import Path
 
 from creator_link_kit.cli import main
 from creator_link_kit.config import convention_from_dict, starter_convention
-from creator_link_kit.links import audit_urls, load_expected_placement_ids
+from creator_link_kit.roster import load_expected_placement_ids, roster_coverage_issues
 
 
 class RosterCoverageTests(unittest.TestCase):
@@ -36,36 +36,36 @@ class RosterCoverageTests(unittest.TestCase):
             )
 
     def test_missing_expected_placement_is_clk201(self):
-        result = audit_urls(
+        issues = roster_coverage_issues(
             [self._url("plc-greta-video-01")],
+            ("plc-greta-video-01", "plc-priya-video-01"),
             self.convention,
-            expected_placements=("plc-greta-video-01", "plc-priya-video-01"),
         )
-        codes = [issue.code for issue in result.issues]
+        codes = [issue.code for issue in issues]
         self.assertIn("CLK201", codes)
-        missing = [issue for issue in result.issues if issue.code == "CLK201"]
+        missing = [issue for issue in issues if issue.code == "CLK201"]
         self.assertEqual(len(missing), 1)
         self.assertIn("plc-priya-video-01", missing[0].message)
         self.assertEqual(missing[0].severity, "error")
 
     def test_unexpected_shipped_placement_is_clk202_warning(self):
-        result = audit_urls(
+        issues = roster_coverage_issues(
             [self._url("plc-extra-video-01")],
+            ("plc-greta-video-01",),
             self.convention,
-            expected_placements=("plc-greta-video-01",),
         )
-        extra = [issue for issue in result.issues if issue.code == "CLK202"]
+        extra = [issue for issue in issues if issue.code == "CLK202"]
         self.assertEqual(len(extra), 1)
         self.assertEqual(extra[0].severity, "warning")
         self.assertEqual(extra[0].parameter, "utm_content")
 
     def test_matching_roster_emits_no_coverage_codes(self):
-        result = audit_urls(
+        issues = roster_coverage_issues(
             [self._url("plc-greta-video-01"), self._url("plc-priya-video-01")],
+            ("plc-greta-video-01", "plc-priya-video-01"),
             self.convention,
-            expected_placements=("plc-greta-video-01", "plc-priya-video-01"),
         )
-        codes = {issue.code for issue in result.issues}
+        codes = {issue.code for issue in issues}
         self.assertNotIn("CLK201", codes)
         self.assertNotIn("CLK202", codes)
 
