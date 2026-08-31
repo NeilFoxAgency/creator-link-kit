@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import unittest
 
+from creator_link_kit.path_utm import install
+
+install()
+
 from creator_link_kit.config import convention_from_dict, starter_convention
 from creator_link_kit.links import audit_urls, validate_url
 
