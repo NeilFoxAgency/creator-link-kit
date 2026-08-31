@@ -1,7 +1,12 @@
 """Creator Link Kit package."""
 
 from .config import ConfigError, Convention, convention_fingerprint, load_convention
-from .links import AuditResult, Issue, audit_urls, build_url, validate_url
+from .links import AuditResult, Issue, audit_urls, build_url
+from .path_utm import install as _install_clk129
+
+_install_clk129()
+
+from .links import validate_url
 from .models import (
     AuditIssue,
     LinkAudit,
