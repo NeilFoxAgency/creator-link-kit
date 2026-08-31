@@ -16,6 +16,11 @@ UTM key glued onto a previous pair with no delimiter.
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .config import Convention
+    from .links import Issue
 
 _STANDARD_UTM = r"utm_(?:source|medium|campaign|term|content|id)"
 
@@ -39,7 +44,6 @@ def has_glued_utm_pair(url: str) -> bool:
 
     if not url:
         return False
-    # Only inspect the query (and, defensively, anything after ?).
     query_start = url.find("?")
     if query_start == -1:
         haystack = url
@@ -49,3 +53,34 @@ def has_glued_utm_pair(url: str) -> bool:
         if hash_at != -1:
             haystack = haystack[:hash_at]
     return bool(_GLUED_UTM.search(haystack) or _SPACED_UTM.search(haystack))
+
+
+def install() -> None:
+    """Bind CLK128 onto ``links.validate_url`` so audit/build/CLI see it."""
+
+    from . import links
+
+    original = links.validate_url
+    if getattr(original, "_clk128", False):
+        return
+
+    def wrapped(url: str, convention: Convention) -> list[Issue]:
+        issues = list(original(url, convention))
+        if has_glued_utm_pair(url) and not any(i.code == "CLK128" for i in issues):
+            issues.insert(
+                0,
+                links.Issue(
+                    "CLK128",
+                    "error",
+                    (
+                        "UTM parameters are glued together without a query "
+                        "delimiter; GA4 will not split the later keys. Insert "
+                        "a bare '&' between each utm_* pair"
+                    ),
+                    url=url,
+                ),
+            )
+        return issues
+
+    wrapped._clk128 = True  # type: ignore[attr-defined]
+    links.validate_url = wrapped
