@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added optional roster coverage checks for `clk audit --roster`.
+  `CLK201` errors when a planned `placement_id` never appears in shipped
+  links; `CLK202` warns when a shipped `utm_content` is not on the roster.
+  See `docs/ROSTER_COVERAGE.md`.
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes
@@ -19,7 +23,7 @@
 - Added **CLK112** errors for unresolved template placeholders such as
   `{{paid_social}}`, `${SOURCE}`, `%{campaign}%`, and `[[CREATOR]]`.
 - Added **CLK117** detection for HTML-entity-corrupted query strings
-  (`&amp;`, `&#38;`, `&#x26;`). Links copied from CMS pages, email HTML, or
+  (`&`, `&#38;`, `&#x26;`). Links copied from CMS pages, email HTML, or
   Word often retain these entities; GA4 never splits the intended UTM pairs.
 - Added **CLK114** audit detection for misspelled UTM parameter names
   (`utm_souce`, `utm-source`, `UTM_SOURCE`, and close variants). GA4 ignores
