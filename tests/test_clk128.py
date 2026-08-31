@@ -5,8 +5,11 @@ from __future__ import annotations
 import unittest
 
 from creator_link_kit.config import convention_from_dict, starter_convention
+from creator_link_kit.query_glued import has_glued_utm_pair, install
+
+install()
+
 from creator_link_kit.links import audit_urls, validate_url
-from creator_link_kit.query_glued import has_glued_utm_pair
 
 
 class GluedUtmTests(unittest.TestCase):
@@ -93,6 +96,13 @@ class GluedUtmTests(unittest.TestCase):
         )
         result = audit_urls([clean, dirty], self.convention)
         self.assertTrue(any(i.code == "CLK128" for i in result.errors))
+
+    def test_package_export_is_wrapped(self) -> None:
+        from creator_link_kit import validate_url as exported
+
+        url = "https://shop.example.com/product?utm_source=youtubeutm_medium=influencer"
+        issues = exported(url, self.convention)
+        self.assertTrue(any(i.code == "CLK128" for i in issues))
 
 
 if __name__ == "__main__":
