@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import unittest
 
-from creator_link_kit.click_ids import paid_click_id_keys
+from creator_link_kit.click_ids import install, paid_click_id_keys
 from creator_link_kit.config import convention_from_dict, starter_convention
+
+install()
+
 from creator_link_kit.links import audit_urls, build_url, validate_url
 
 
