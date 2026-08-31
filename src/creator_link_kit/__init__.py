@@ -1,7 +1,7 @@
 """Creator Link Kit package."""
 
+from .click_ids import install as _install_clk129
 from .config import ConfigError, Convention, convention_fingerprint, load_convention
-from .links import AuditResult, Issue, audit_urls, build_url, validate_url
 from .models import (
     AuditIssue,
     LinkAudit,
@@ -12,6 +12,10 @@ from .models import (
     ProvisionedLink,
 )
 from .spec import build_link_specification
+
+_install_clk129()
+
+from .links import AuditResult, Issue, audit_urls, build_url, validate_url
 
 __all__ = [
     "AuditIssue",
