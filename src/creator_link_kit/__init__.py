@@ -1,6 +1,10 @@
 """Creator Link Kit package."""
 
 from .config import ConfigError, Convention, convention_fingerprint, load_convention
+from .query_glued import install as _install_clk128
+
+_install_clk128()
+
 from .links import AuditResult, Issue, audit_urls, build_url, validate_url
 from .models import (
     AuditIssue,
