@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added optional `clk audit --planned` coverage so generated batch CSVs can
+  be reconciled against shipped links. **CLK206** flags a planned placement
+  that never shipped, **CLK207** flags destination drift, **CLK208** warns
+  on UTM drift, **CLK209** warns on extra shipped placements, and **CLK210**
+  flags duplicate planned `utm_content` rows. Audits without `--planned`
+  are unchanged. See `docs/PLANNED_COVERAGE.md`.
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes
@@ -19,7 +25,7 @@
 - Added **CLK112** errors for unresolved template placeholders such as
   `{{paid_social}}`, `${SOURCE}`, `%{campaign}%`, and `[[CREATOR]]`.
 - Added **CLK117** detection for HTML-entity-corrupted query strings
-  (`&amp;`, `&#38;`, `&#x26;`). Links copied from CMS pages, email HTML, or
+  (`&`, `&#38;`, `&#x26;`). Links copied from CMS pages, email HTML, or
   Word often retain these entities; GA4 never splits the intended UTM pairs.
 - Added **CLK114** audit detection for misspelled UTM parameter names
   (`utm_souce`, `utm-source`, `UTM_SOURCE`, and close variants). GA4 ignores
