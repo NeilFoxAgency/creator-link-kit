@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added optional `clk audit --codes codes.csv` discount-code reconciliation.
+  Planned codes that never appear as `discount` / `coupon` / `promo` query
+  values raise **CLK203**. Extra shipped codes are **CLK204** warnings.
+  Duplicate planned codes in the codes file raise **CLK205**. Audits without
+  `--codes` are unchanged.
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes
