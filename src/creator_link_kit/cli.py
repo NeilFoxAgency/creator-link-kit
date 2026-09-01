@@ -12,7 +12,8 @@ from . import __version__
 from .batch import batch_csv
 from .config import ConfigError, load_convention, starter_convention
 from .csvsafe import safe_row
-from .links import audit_urls
+from .links import AuditResult, audit_urls
+from .planned import merge_audit_issues, reconcile_planned
 from .models import LinkIdentifiers
 from .qr import (
     QrDependencyError,
@@ -112,6 +113,17 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     audit_parser.add_argument("--url-column")
+    audit_parser.add_argument(
+        "--planned",
+        help=(
+            "optional CSV or text of generated/planned links to reconcile "
+            "against --input (CLK206-CLK210)"
+        ),
+    )
+    audit_parser.add_argument(
+        "--planned-url-column",
+        help="CSV column for --planned (default: same auto-detect as --input)",
+    )
     audit_parser.add_argument(
         "--format", choices=("text", "json", "csv", "html"), default="text"
     )
@@ -267,6 +279,15 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "audit":
             urls = _read_audit_urls(Path(args.input), args.url_column)
             result = audit_urls(urls, convention)
+            if args.planned:
+                planned_urls = _read_audit_urls(
+                    Path(args.planned), args.planned_url_column
+                )
+                extra = reconcile_planned(planned_urls, urls, convention)
+                result = AuditResult(
+                    checked=result.checked,
+                    issues=merge_audit_issues(result.issues, extra),
+                )
             rendered = {
                 "text": to_text,
                 "json": to_json,
