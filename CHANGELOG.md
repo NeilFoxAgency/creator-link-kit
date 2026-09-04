@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added **CLK131** detection for ASCII control characters inside UTM values
+  (newline, tab, CR, NUL, DEL, and other C0 controls). Spreadsheet paste and
+  multi-line CMS cells otherwise ship distinct analytics dimensions and can
+  split CSV or QR export rows. Ordinary spaces are not flagged.
+
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes
