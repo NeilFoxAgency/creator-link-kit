@@ -2,6 +2,8 @@
 
 from .config import ConfigError, Convention, convention_fingerprint, load_convention
 from .links import AuditResult, Issue, audit_urls, build_url, validate_url
+from . import links as _links
+from .clk131 import install as _install_clk131
 from .models import (
     AuditIssue,
     LinkAudit,
@@ -12,6 +14,9 @@ from .models import (
     ProvisionedLink,
 )
 from .spec import build_link_specification
+
+_install_clk131(_links)
+from .links import validate_params  # noqa: E402  # re-bind after CLK131 wrap
 
 __all__ = [
     "AuditIssue",
@@ -31,6 +36,7 @@ __all__ = [
     "convention_fingerprint",
     "load_convention",
     "validate_url",
+    "validate_params",
 ]
 
 __version__ = "0.2.0"
