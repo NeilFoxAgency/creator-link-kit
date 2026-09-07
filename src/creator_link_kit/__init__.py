@@ -11,7 +11,11 @@ from .models import (
     LinkSpecification,
     ProvisionedLink,
 )
+from .shortener_utm import install_clk125
 from .spec import build_link_specification
+
+install_clk125()
+from .links import validate_url as validate_url  # re-bind wrapped checker
 
 __all__ = [
     "AuditIssue",
