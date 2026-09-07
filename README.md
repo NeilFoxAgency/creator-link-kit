@@ -546,3 +546,7 @@ All generation and auditing happens locally.
 ## License
 
 MIT. See `LICENSE`.
+
+## Agency production-preparation workflow
+
+Use `python -m creator_link_kit.agency intake.json --output plan.json` to prepare audited, fingerprinted placement specifications and exact draft attribution-connector requests. It preserves IDs, supports multiple placements per creator, uses `creator_sponsorship`, requires explicit approved destination hosts and a supplied Supabase snapshot version, and never provisions links or invents discount codes. See [AGENCY_WORKFLOW.md](docs/AGENCY_WORKFLOW.md) for installation, input, execution gates, read-back/redirect QA, and reporting. [The example intake](examples/agency-intake.json) is synthetic.

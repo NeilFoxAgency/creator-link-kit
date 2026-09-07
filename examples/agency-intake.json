@@ -1,0 +1,16 @@
+{
+  "source_system": "supabase",
+  "supabase_snapshot_version": "2026-09-06T00:00:00Z",
+  "brand_id": "brand-demo",
+  "campaign_id": "cmp-demo",
+  "approved_domains": [
+    "shop.example.com"
+  ],
+  "placements": [
+    {
+      "creator_id": "creator-demo",
+      "placement_id": "plc-demo-1",
+      "destination_url": "https://shop.example.com/product?variant=blue"
+    }
+  ]
+}
