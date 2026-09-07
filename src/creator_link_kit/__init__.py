@@ -1,7 +1,7 @@
 """Creator Link Kit package."""
 
 from .config import ConfigError, Convention, convention_fingerprint, load_convention
-from .links import AuditResult, Issue, audit_urls, build_url, validate_url
+from .links import AuditResult, Issue, build_url
 from .models import (
     AuditIssue,
     LinkAudit,
@@ -11,6 +11,7 @@ from .models import (
     LinkSpecification,
     ProvisionedLink,
 )
+from .raw_hygiene import audit_urls, validate_url
 from .spec import build_link_specification
 
 __all__ = [
