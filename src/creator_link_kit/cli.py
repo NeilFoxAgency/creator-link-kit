@@ -12,7 +12,8 @@ from . import __version__
 from .batch import batch_csv
 from .config import ConfigError, load_convention, starter_convention
 from .csvsafe import safe_row
-from .links import audit_urls
+from .codes import load_planned_codes, reconcile_codes
+from .links import AuditResult, audit_urls
 from .models import LinkIdentifiers
 from .qr import (
     QrDependencyError,
@@ -117,6 +118,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     audit_parser.add_argument("--out")
     audit_parser.add_argument("--strict", action="store_true")
+    audit_parser.add_argument(
+        "--codes",
+        help=(
+            "CSV of planned discount codes (column discount_code, or the "
+            "convention batch.discount_code_column). Emits CLK203/CLK204/CLK205"
+        ),
+    )
 
     qr_parser = subparsers.add_parser(
         "qr",
@@ -267,6 +275,14 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "audit":
             urls = _read_audit_urls(Path(args.input), args.url_column)
             result = audit_urls(urls, convention)
+            if args.codes:
+                planned, code_issues = load_planned_codes(args.codes, convention)
+                extra = list(code_issues)
+                extra.extend(reconcile_codes(urls, planned))
+                result = AuditResult(
+                    checked=result.checked,
+                    issues=tuple(result.issues) + tuple(extra),
+                )
             rendered = {
                 "text": to_text,
                 "json": to_json,
