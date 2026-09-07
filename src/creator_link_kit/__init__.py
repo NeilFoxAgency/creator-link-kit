@@ -11,7 +11,13 @@ from .models import (
     LinkSpecification,
     ProvisionedLink,
 )
+from .query_invisible import install as _install_clk121
 from .spec import build_link_specification
+
+_install_clk121()
+
+# Re-bind after install so package-level validate_url includes CLK121.
+from .links import validate_url as validate_url
 
 __all__ = [
     "AuditIssue",

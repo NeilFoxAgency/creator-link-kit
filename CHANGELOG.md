@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added **CLK121** detection for invisible and format-control characters
+  (zero-width space, BOM, NBSP, soft hyphen, wrapped newlines). Copy/paste
+  from Slack, Docs, Word, or email often inserts these; GA4 then stores a
+  different dimension than the one on screen.
+
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes
