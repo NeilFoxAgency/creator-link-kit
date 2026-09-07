@@ -192,10 +192,10 @@ def prepare_campaign(raw: Any) -> dict[str, Any]:
         "approved_domains": domains,
         "placements": prepared,
         "requirements_before_execution": [
-            "Re-fetch the authoritative campaign and every placement; reject stale snapshots.",
+            "Re-fetch authoritative campaign/placements; reject stale snapshots.",
             "Confirm destination/code approval and creator/deliverable identity.",
             "Execute only under the current operations mode and write permissions.",
-            "Read back each returned delivery link and verify the redirect before publication.",
+            "Read back each delivery link; verify its redirect before publication.",
         ],
     }
     canonical = json.dumps(
@@ -214,7 +214,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.intake.stat().st_size > 1_000_000:
             raise ValueError("intake exceeds 1 MB")
         plan = prepare_campaign(json.loads(args.intake.read_text(encoding="utf-8")))
-        # Never overwrite a previous plan, and do not leave output on validation failure.
+        # Never overwrite a prior plan or leave output on validation failure.
         with args.output.open("x", encoding="utf-8") as stream:
             stream.write(json.dumps(plan, indent=2, ensure_ascii=True) + "\n")
     except (OSError, ValueError, TypeError) as exc:
