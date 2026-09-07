@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added **CLK126** detection for UTM parameters attached to video/social
+  platform hosts (`youtu.be`, `youtube.com`, `tiktok.com`, `instagram.com`,
+  `x.com`, and related roots). Platforms do not forward those keys to the
+  brand landing page, so GA4 never sees the campaign. Untagged platform URLs
+  and first-party hosts listed in `owned_domains` are not flagged.
+
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes
