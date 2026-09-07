@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added **CLK120** detection for percent-encoded query delimiters immediately
+  before a UTM key (`%26utm_` or `%3Futm_`). "Encode this URL" tools, JSON
+  dumps, and spreadsheet formulas often encode `&`/`?`; `parse_qsl` then
+  absorbs later UTM pairs into the previous value so GA4 never sees them.
+  Encoded ampersands that are not followed by a UTM key are not flagged.
+
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes
@@ -19,7 +25,7 @@
 - Added **CLK112** errors for unresolved template placeholders such as
   `{{paid_social}}`, `${SOURCE}`, `%{campaign}%`, and `[[CREATOR]]`.
 - Added **CLK117** detection for HTML-entity-corrupted query strings
-  (`&amp;`, `&#38;`, `&#x26;`). Links copied from CMS pages, email HTML, or
+  (`&`, `&#38;`, `&#x26;`). Links copied from CMS pages, email HTML, or
   Word often retain these entities; GA4 never splits the intended UTM pairs.
 - Added **CLK114** audit detection for misspelled UTM parameter names
   (`utm_souce`, `utm-source`, `UTM_SOURCE`, and close variants). GA4 ignores
