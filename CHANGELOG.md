@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added **CLK132** detection for whitespace inside the raw URL (spreadsheet
+  wraps, Word NBSP, newlines). These survive `urlsplit` but break when pasted
+  into descriptions or QR payloads.
+- Added **CLK133** detection for doubled `http(s)://` schemes from concatenating
+  a scheme onto an already-absolute URL. `urlsplit` otherwise treats `https`
+  as the hostname.
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes
