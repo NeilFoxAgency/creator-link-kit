@@ -1,7 +1,8 @@
 """Creator Link Kit package."""
 
+from .audit_nested import audit_urls
 from .config import ConfigError, Convention, convention_fingerprint, load_convention
-from .links import AuditResult, Issue, audit_urls, build_url, validate_url
+from .links import AuditResult, Issue, build_url, validate_url
 from .models import (
     AuditIssue,
     LinkAudit,
