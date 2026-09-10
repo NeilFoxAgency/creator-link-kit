@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import unittest
 
+import creator_link_kit  # noqa: F401  # applies CLK119 wrap to links.validate_url
 from creator_link_kit.config import convention_from_dict, starter_convention
 from creator_link_kit.links import audit_urls, validate_url
 
