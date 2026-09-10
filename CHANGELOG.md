@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added **CLK119** detection for percent-encoded UTM separators (`%26utm_`).
+  Excel, Slack, and CMS exports often encode `&` as `%26`, so later UTM pairs
+  stay inside an earlier value and GA4 attributes the session as direct/none.
+  Normal `?utm_` / `&utm_` query strings are not flagged. Distinct from CLK117
+  (HTML entities) and CLK118 (fragment UTMs).
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes
@@ -19,7 +24,7 @@
 - Added **CLK112** errors for unresolved template placeholders such as
   `{{paid_social}}`, `${SOURCE}`, `%{campaign}%`, and `[[CREATOR]]`.
 - Added **CLK117** detection for HTML-entity-corrupted query strings
-  (`&amp;`, `&#38;`, `&#x26;`). Links copied from CMS pages, email HTML, or
+  (`&`, `&#38;`, `&#x26;`). Links copied from CMS pages, email HTML, or
   Word often retain these entities; GA4 never splits the intended UTM pairs.
 - Added **CLK114** audit detection for misspelled UTM parameter names
   (`utm_souce`, `utm-source`, `UTM_SOURCE`, and close variants). GA4 ignores
