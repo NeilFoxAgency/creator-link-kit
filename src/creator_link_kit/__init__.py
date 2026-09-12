@@ -2,6 +2,8 @@
 
 from .config import ConfigError, Convention, convention_fingerprint, load_convention
 from .links import AuditResult, Issue, audit_urls, build_url, validate_url
+from . import encoded_separators as _encoded_separators
+validate_url = _encoded_separators.validate_url_with_clk119
 from .models import (
     AuditIssue,
     LinkAudit,
