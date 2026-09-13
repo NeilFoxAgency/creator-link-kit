@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added **CLK119** detection for percent-encoded UTM separators (`%26utm_`).
+  Spreadsheet and CMS exports often encode `&` as `%26`, so later UTM pairs
+  stay glued inside an earlier value and GA4 never splits them. Distinct from
+  CLK117 (HTML entities) and CLK118 (fragment UTMs).
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes
