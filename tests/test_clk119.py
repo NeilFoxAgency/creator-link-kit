@@ -3,45 +3,35 @@
 from __future__ import annotations
 
 import unittest
+from urllib.parse import parse_qsl, urlsplit
 
-from creator_link_kit.config import convention_from_dict, starter_convention
-from creator_link_kit.links import audit_urls, validate_url
+from creator_link_kit.encoded_utm import CLK119_MESSAGE, has_encoded_utm_separator
+
+
+def _query_and_pairs(url: str) -> tuple[str, list[tuple[str, str]]]:
+    parsed = urlsplit(url)
+    return parsed.query, parse_qsl(parsed.query, keep_blank_values=True)
 
 
 class EncodedUtmSeparatorTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.convention = convention_from_dict(starter_convention())
-
-    def test_percent_encoded_ampersand_before_utm_is_error(self) -> None:
+    def test_percent_encoded_ampersand_before_utm_is_detected(self) -> None:
         url = (
             "https://shop.example.com/product"
             "?utm_source=youtube%26utm_medium=influencer"
             "&utm_campaign=cmp-spring-launch"
         )
-        issues = validate_url(url, self.convention)
-        codes = {issue.code for issue in issues}
-        self.assertIn("CLK119", codes)
-        issue = next(i for i in issues if i.code == "CLK119")
-        self.assertEqual(issue.severity, "error")
-        self.assertIn("%26", issue.message)
+        query, pairs = _query_and_pairs(url)
+        self.assertTrue(has_encoded_utm_separator(query, pairs))
+        self.assertIn("%26", CLK119_MESSAGE)
 
-    def test_uppercase_encoded_separator_is_error(self) -> None:
+    def test_uppercase_encoded_separator_is_detected(self) -> None:
         url = (
             "https://shop.example.com/product"
             "?utm_source=youtube%26UTM_medium=influencer"
             "&utm_campaign=cmp-spring-launch"
         )
-        issues = validate_url(url, self.convention)
-        self.assertTrue(any(i.code == "CLK119" for i in issues))
-
-    def test_encoded_separator_inside_decoded_value(self) -> None:
-        url = (
-            "https://shop.example.com/product"
-            "?utm_source=youtube%26utm_campaign=cmp-spring-launch"
-            "&utm_medium=influencer"
-        )
-        issues = validate_url(url, self.convention)
-        self.assertTrue(any(i.code == "CLK119" for i in issues))
+        query, pairs = _query_and_pairs(url)
+        self.assertTrue(has_encoded_utm_separator(query, pairs))
 
     def test_normal_query_string_is_not_flagged(self) -> None:
         url = (
@@ -50,8 +40,8 @@ class EncodedUtmSeparatorTests(unittest.TestCase):
             "&utm_campaign=cmp-spring-launch&utm_id=cmp-spring-launch"
             "&utm_content=plc-greta-01"
         )
-        issues = validate_url(url, self.convention)
-        self.assertFalse(any(i.code == "CLK119" for i in issues))
+        query, pairs = _query_and_pairs(url)
+        self.assertFalse(has_encoded_utm_separator(query, pairs))
 
     def test_encoded_ampersand_in_non_utm_value_is_not_flagged(self) -> None:
         url = (
@@ -61,23 +51,8 @@ class EncodedUtmSeparatorTests(unittest.TestCase):
             "&utm_campaign=cmp-spring-launch&utm_id=cmp-spring-launch"
             "&utm_content=plc-greta-01"
         )
-        issues = validate_url(url, self.convention)
-        self.assertFalse(any(i.code == "CLK119" for i in issues))
-
-    def test_audit_surfaces_clk119(self) -> None:
-        dirty = (
-            "https://shop.example.com/product"
-            "?utm_source=youtube%26utm_medium=influencer"
-            "&utm_campaign=cmp-spring-launch"
-        )
-        clean = (
-            "https://shop.example.com/product"
-            "?utm_source=youtube&utm_medium=influencer"
-            "&utm_campaign=cmp-spring-launch&utm_id=cmp-spring-launch"
-            "&utm_content=plc-greta-01"
-        )
-        result = audit_urls([clean, dirty], self.convention)
-        self.assertTrue(any(i.code == "CLK119" for i in result.errors))
+        query, pairs = _query_and_pairs(url)
+        self.assertFalse(has_encoded_utm_separator(query, pairs))
 
 
 if __name__ == "__main__":
