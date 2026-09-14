@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added **CLK120** detection for invisible copy/paste characters (zero-width
+  space, soft hyphen, BOM, non-breaking spaces, and joiners) that survive
+  transfers from Google Docs, Slack, Word, and PDFs. Ordinary ASCII spaces
+  stay under CLK113 / CLK001. CLK120 is preserved even when the same URL
+  also fails CLK001 (BOM prefix, soft-hyphen hosts).
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes

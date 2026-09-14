@@ -2,6 +2,8 @@
 
 from .config import ConfigError, Convention, convention_fingerprint, load_convention
 from .links import AuditResult, Issue, audit_urls, build_url, validate_url
+from . import invisible as _invisible  # noqa: F401  # installs CLK120 wrap
+validate_url = _invisible.validate_url_with_clk120
 from .models import (
     AuditIssue,
     LinkAudit,
