@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added **CLK120** detection for invisible copy/paste format characters in
+  raw campaign URLs (zero-width space, soft hyphen, BOM, non-breaking spaces,
+  and joiners). The scan runs before `urlsplit` and is preserved when the same
+  URL also fails CLK001. Ordinary ASCII spaces are not flagged.
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes
