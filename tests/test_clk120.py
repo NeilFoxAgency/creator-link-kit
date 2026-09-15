@@ -4,9 +4,14 @@ from __future__ import annotations
 
 import unittest
 
+import creator_link_kit  # installs the CLK120 validate_url wrap
 from creator_link_kit.config import convention_from_dict, starter_convention
-from creator_link_kit.invisible import find_invisible_format_labels
-from creator_link_kit.links import audit_urls, validate_url
+from creator_link_kit.invisible import find_invisible_format_labels, install
+from creator_link_kit import links
+
+install()
+validate_url = links.validate_url
+audit_urls = links.audit_urls
 
 
 class InvisibleCharacterTests(unittest.TestCase):
@@ -98,6 +103,16 @@ class InvisibleCharacterTests(unittest.TestCase):
                 "zero-width joiner (U+200D)",
             ),
         )
+
+    def test_package_export_validate_url_includes_clk120(self) -> None:
+        url = (
+            "https://shop.example.com/product"
+            "?utm_source=you\u200btube&utm_medium=influencer"
+            "&utm_campaign=cmp-spring-launch&utm_id=cmp-spring-launch"
+            "&utm_content=plc-greta-01"
+        )
+        issues = creator_link_kit.validate_url(url, self.convention)
+        self.assertTrue(any(i.code == "CLK120" for i in issues))
 
 
 if __name__ == "__main__":
