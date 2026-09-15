@@ -12,6 +12,10 @@ from .models import (
     ProvisionedLink,
 )
 from .spec import build_link_specification
+from .invisible import install as _install_clk120
+
+_install_clk120()
+from .links import validate_url as validate_url
 
 __all__ = [
     "AuditIssue",
