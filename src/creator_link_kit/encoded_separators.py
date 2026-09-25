@@ -15,7 +15,8 @@ import re
 from collections.abc import Callable
 from urllib.parse import parse_qsl, urlsplit
 
-from .links import Issue, validate_url as _validate_url
+from .links import Issue
+from .links import validate_url as _validate_url
 
 _ENCODED_UTM_SEPARATOR = re.compile(r"%26utm_", re.IGNORECASE)
 _GLUED_UTM_IN_VALUE = re.compile(
