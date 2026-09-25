@@ -5,9 +5,9 @@ from __future__ import annotations
 import unittest
 
 import creator_link_kit  # installs the CLK120 validate_url wrap
+from creator_link_kit import links
 from creator_link_kit.config import convention_from_dict, starter_convention
 from creator_link_kit.invisible import find_invisible_format_labels, install
-from creator_link_kit import links
 
 install()
 validate_url = links.validate_url
