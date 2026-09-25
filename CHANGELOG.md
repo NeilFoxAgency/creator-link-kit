@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added **CLK119** detection for percent-encoded UTM separators (`%26utm_`).
+  Excel, Slack, and CMS exports often encode `&` as `%26`, so later UTM pairs
+  stay glued inside an earlier value and GA4 attributes the session as
+  direct/none. Encoded ampersands in non-UTM values such as `sku%26color`
+  are not flagged.
 - Added **CLK118** detection for UTM parameters placed in the URL fragment
   (`#...`). Browsers and GA4 never send the fragment to the server, so these
   links attribute as direct/none despite looking tracked. Innocent SPA hashes
