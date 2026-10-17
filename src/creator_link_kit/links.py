@@ -10,6 +10,7 @@ from difflib import get_close_matches
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from .config import Convention, domain_is_owned
+from .invisible import invisible_url_markers
 from .urls import authority_error as _authority_error
 
 # Canonical UTM keys recognized by GA4 and most analytics tools.
@@ -257,6 +258,32 @@ def validate_params(
 def validate_url(url: str, convention: Convention) -> list[Issue]:
     issues: list[Issue] = []
 
+    # Scan the raw string before urlsplit. Invisible format characters pasted
+    # from Google Docs, Slack, Word, or PDF viewers are not visible in most
+    # spreadsheets, but they split hostnames, glue UTM keys, or become literal
+    # characters that GA4 treats as a different value. The finding is kept
+    # even when the URL also fails CLK001 (a BOM prefix or a soft-hyphen host
+    # fails parsing for the same underlying reason), so the parse error does
+    # not hide the actual cause. Ordinary ASCII spaces are covered by CLK113
+    # and CLK001 and are not flagged here.
+    markers = invisible_url_markers(url)
+    if markers:
+        issues.append(
+            Issue(
+                "CLK120",
+                "error",
+                (
+                    "URL contains invisible copy/paste character(s): "
+                    + ", ".join(markers)
+                    + "; browsers and GA4 parse a different host or UTM value, "
+                    "so attribution is lost. Remove the hidden character(s) "
+                    "before publishing"
+                ),
+                url=url,
+            )
+        )
+    pre_parse_issues = list(issues)
+
     # Scan the raw URL first. Numeric entities such as &#38; contain '#' and
     # would be treated as the start of a fragment by urlsplit, hiding the rest
     # of the query from parse_qsl. Named entities like &amp; stay in the query
@@ -280,10 +307,12 @@ def validate_url(url: str, convention: Convention) -> list[Issue]:
     try:
         parsed = urlsplit(url)
     except ValueError as exc:
-        return [Issue("CLK001", "error", f"URL cannot be parsed: {exc}", url=url)]
+        return pre_parse_issues + [
+            Issue("CLK001", "error", f"URL cannot be parsed: {exc}", url=url)
+        ]
 
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        return [
+        return pre_parse_issues + [
             Issue(
                 "CLK001",
                 "error",
@@ -293,7 +322,7 @@ def validate_url(url: str, convention: Convention) -> list[Issue]:
         ]
     authority_error = _authority_error(parsed)
     if authority_error is not None:
-        return [Issue("CLK001", "error", authority_error, url=url)]
+        return pre_parse_issues + [Issue("CLK001", "error", authority_error, url=url)]
     if parsed.scheme == "http":
         issues.append(Issue("CLK002", "warning", "URL uses http instead of https"))
     if convention.owned_domains and not domain_is_owned(
