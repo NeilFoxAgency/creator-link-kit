@@ -145,7 +145,7 @@ clk build \
   --brand-id brd-glowdrop \
   --campaign-id cmp-glowdrop-launch \
   --creator-id crt-greta \
-  --placement-id plc-greta-video-01
+  --placement-id plc-glowdrop-greta-video-01
 ```
 
 Use JSON output when another tool or agent needs a durable specification:
@@ -158,7 +158,7 @@ clk build \
   --brand-id brd-glowdrop \
   --campaign-id cmp-glowdrop-launch \
   --creator-id crt-greta \
-  --placement-id plc-greta-video-01 \
+  --placement-id plc-glowdrop-greta-video-01 \
   --format json
 ```
 
@@ -175,7 +175,7 @@ The result has a stable, provider-neutral shape:
     "brand_id": "brd-glowdrop",
     "campaign_id": "cmp-glowdrop-launch",
     "creator_id": "crt-greta",
-    "placement_id": "plc-greta-video-01"
+    "placement_id": "plc-glowdrop-greta-video-01"
   },
   "audit": {
     "valid": true,
@@ -486,6 +486,8 @@ The included example workflow is at `.github/workflows/example-audit.yml`.
 | `CLK116` | error | One `utm_content` is paired with multiple campaigns or destinations |
 | `CLK117` | error | Query string still contains HTML entities (`&amp;`, `&#38;`, …) so UTM pairs are not split |
 | `CLK118` | error | UTM parameters appear in the URL fragment (`#...`); browsers and GA4 never send them |
+| `CLK119` | error | Percent-encoded UTM separator (`%26utm_`) keeps later UTM pairs glued inside an earlier value |
+| `CLK120` | error | Invisible copy/paste characters (zero-width space, soft hyphen, BOM, non-breaking spaces, joiners) corrupt the host or UTM values |
 
 Batch duplicate-placement failures are reported in the row's `issues` field
 before URL generation and do not receive a `CLK` code because they concern the
