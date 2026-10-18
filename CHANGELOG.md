@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Added **CLK120** detection for invisible copy/paste characters (zero-width
+  space, soft hyphen, BOM, non-breaking and narrow no-break spaces, and
+  joiners) in shipped URLs. Google Docs, Slack, Word, and PDF viewers insert
+  these format characters silently; browsers and GA4 then parse a different
+  host or UTM value and the session attributes as direct/none. CLK120 is
+  preserved alongside CLK001 when the same character also breaks parsing (a
+  BOM prefix or a soft-hyphen hostname), so the parse error does not hide the
+  cause. Ordinary ASCII spaces remain covered by CLK113 and CLK001 and are
+  not flagged. The README rule table now also lists the previously shipped
+  CLK119 rule.
 - Added **CLK119** detection for percent-encoded UTM separators (`%26utm_`).
   Excel, Slack, and CMS exports often encode `&` as `%26`, so later UTM pairs
   stay glued inside an earlier value and GA4 attributes the session as
