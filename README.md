@@ -446,7 +446,7 @@ same convention without hand-writing installation and CLI steps:
 | `config` | yes | - | Convention file path |
 | `input` | yes | - | CSV or text file containing links |
 | `url-column` | no | auto | CSV column containing the URL |
-| `format` | no | - | `text`, `json`, `csv`, or `html` |
+| `format` | no | `text` | `text`, `json`, `csv`, or `html` |
 | `strict` | no | `false` | Treat warnings as failures |
 | `python-version` | no | `3.12` | Python runtime for the action |
 | `version` | no | local or latest | Package version to install |
