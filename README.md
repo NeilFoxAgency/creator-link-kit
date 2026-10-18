@@ -170,7 +170,7 @@ The result has a stable, provider-neutral shape:
   "config_version": 1,
   "config_fingerprint": "14f12541e5132116a6dc06cf0788fa92bed06fccc5ac9815cdde4f698e51b80f",
   "original_destination": "https://shop.example.com/product",
-  "generated_destination": "https://shop.example.com/product?utm_medium=influencer&utm_source=youtube&utm_campaign=cmp-glowdrop-launch&utm_id=cmp-glowdrop-launch&utm_content=plc-greta-video-01",
+  "generated_destination": "https://shop.example.com/product?utm_medium=influencer&utm_source=youtube&utm_campaign=cmp-glowdrop-launch&utm_id=cmp-glowdrop-launch&utm_content=plc-glowdrop-greta-video-01",
   "ids": {
     "brand_id": "brd-glowdrop",
     "campaign_id": "cmp-glowdrop-launch",
@@ -446,7 +446,7 @@ same convention without hand-writing installation and CLI steps:
 | `config` | yes | - | Convention file path |
 | `input` | yes | - | CSV or text file containing links |
 | `url-column` | no | auto | CSV column containing the URL |
-| `format` | no | `text` | `text`, `json`, `csv`, or `html` |
+| `format` | no | - | `text`, `json`, `csv`, or `html` |
 | `strict` | no | `false` | Treat warnings as failures |
 | `python-version` | no | `3.12` | Python runtime for the action |
 | `version` | no | local or latest | Package version to install |
