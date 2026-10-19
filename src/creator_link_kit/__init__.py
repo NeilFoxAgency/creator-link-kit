@@ -1,8 +1,8 @@
 """Creator Link Kit package."""
 
-from . import encoded_separators as _encoded_separators
+from . import encoded_separators as _encoded_separators  # noqa: F401  # side effect: installs CLK119 on links.validate_url
 from .config import ConfigError, Convention, convention_fingerprint, load_convention
-from .links import AuditResult, Issue, audit_urls, build_url
+from .links import AuditResult, Issue, build_url
 from .models import (
     AuditIssue,
     LinkAudit,
@@ -12,10 +12,8 @@ from .models import (
     LinkSpecification,
     ProvisionedLink,
 )
+from .raw_hygiene import audit_urls, validate_url
 from .spec import build_link_specification
-
-# Re-export the CLK119-aware validator installed on package import.
-validate_url = _encoded_separators.validate_url_with_clk119
 
 __all__ = [
     "AuditIssue",
