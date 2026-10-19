@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added **CLK132** detection for whitespace inside the raw URL (spreadsheet
+  wraps, Word NBSP, newlines). These survive `urlsplit` but break when pasted
+  into descriptions or QR payloads.
+- Added **CLK133** detection for doubled `http(s)://` schemes from concatenating
+  a scheme onto an already-absolute URL. `urlsplit` otherwise treats `https`
+  as the hostname.
 - Added **CLK120** detection for invisible copy/paste characters (zero-width
   space, soft hyphen, BOM, non-breaking and narrow no-break spaces, and
   joiners) in shipped URLs. Google Docs, Slack, Word, and PDF viewers insert
