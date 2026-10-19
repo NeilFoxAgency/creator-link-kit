@@ -488,6 +488,7 @@ The included example workflow is at `.github/workflows/example-audit.yml`.
 | `CLK118` | error | UTM parameters appear in the URL fragment (`#...`); browsers and GA4 never send them |
 | `CLK119` | error | Percent-encoded UTM separator (`%26utm_`) keeps later UTM pairs glued inside an earlier value |
 | `CLK120` | error | Invisible copy/paste characters (zero-width space, soft hyphen, BOM, non-breaking spaces, joiners) corrupt the host or UTM values |
+| `CLK131` | error | UTM value contains ASCII control characters (newline, tab, CR, NUL, DEL) that split exports or mismatch analytics dimensions |
 | `CLK132` | error | Raw URL contains whitespace (space, tab, newline, or Unicode separator) that splits or encodes the link when pasted |
 | `CLK133` | error | URL starts with a doubled `http(s)://` scheme from concatenating a scheme onto an absolute URL |
 
