@@ -12,7 +12,6 @@ from . import __version__
 from .batch import batch_csv
 from .config import ConfigError, load_convention, starter_convention
 from .csvsafe import safe_row
-from .links import audit_urls
 from .models import LinkIdentifiers
 from .qr import (
     QrDependencyError,
@@ -20,6 +19,7 @@ from .qr import (
     make_qr_jobs_from_urls,
     write_qr_codes,
 )
+from .raw_hygiene import audit_urls
 from .report import to_csv, to_html, to_json, to_text
 from .spec import build_link_specification
 from .urls import extract_http_urls
