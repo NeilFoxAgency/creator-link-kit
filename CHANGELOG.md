@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added **CLK131** detection for ASCII control characters inside UTM values
+  (newline, tab, CR, NUL, DEL, and other C0 controls). Spreadsheet paste and
+  multi-line CMS cells otherwise ship distinct analytics dimensions and can
+  split CSV or QR export rows. Ordinary spaces are not flagged.
 - Added **CLK132** detection for whitespace inside the raw URL (spreadsheet
   wraps, Word NBSP, newlines). These survive `urlsplit` but break when pasted
   into descriptions or QR payloads.
