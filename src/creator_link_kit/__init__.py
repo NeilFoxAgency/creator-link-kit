@@ -15,6 +15,7 @@ from .models import (
     ProvisionedLink,
 )
 from .raw_hygiene import audit_urls, validate_url
+from .roster import load_expected_placement_ids, roster_coverage_issues
 from .spec import build_link_specification
 
 _install_clk131(_links)
@@ -37,6 +38,8 @@ __all__ = [
     "build_url",
     "convention_fingerprint",
     "load_convention",
+    "load_expected_placement_ids",
+    "roster_coverage_issues",
     "validate_params",
     "validate_url",
 ]
