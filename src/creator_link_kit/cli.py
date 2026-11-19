@@ -12,6 +12,7 @@ from . import __version__
 from .batch import batch_csv
 from .config import ConfigError, load_convention, starter_convention
 from .csvsafe import safe_row
+from .links import AuditResult
 from .models import LinkIdentifiers
 from .qr import (
     QrDependencyError,
@@ -21,6 +22,7 @@ from .qr import (
 )
 from .raw_hygiene import audit_urls
 from .report import to_csv, to_html, to_json, to_text
+from .roster import load_expected_placement_ids, roster_coverage_issues
 from .spec import build_link_specification
 from .urls import extract_http_urls
 
@@ -112,6 +114,13 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     audit_parser.add_argument("--url-column")
+    audit_parser.add_argument(
+        "--roster",
+        help=(
+            "optional campaign roster CSV used to check that every planned "
+            "placement_id appears in shipped links (CLK201/CLK202)"
+        ),
+    )
     audit_parser.add_argument(
         "--format", choices=("text", "json", "csv", "html"), default="text"
     )
@@ -267,6 +276,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "audit":
             urls = _read_audit_urls(Path(args.input), args.url_column)
             result = audit_urls(urls, convention)
+            if args.roster:
+                expected = load_expected_placement_ids(args.roster, convention)
+                coverage = roster_coverage_issues(urls, expected, convention)
+                result = AuditResult(
+                    checked=result.checked,
+                    issues=result.issues + tuple(coverage),
+                )
             rendered = {
                 "text": to_text,
                 "json": to_json,
