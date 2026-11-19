@@ -406,6 +406,11 @@ paired with multiple `utm_id` values, `CLK111` rejects one `utm_id` reused
 for multiple campaign names, and `CLK116` rejects one `utm_content` paired
 with multiple campaigns or destinations.
 
+Pass `--roster roster.csv` to also check coverage against the planned
+placements: `CLK201` errors when a roster `placement_id` never ships and
+`CLK202` warns when a shipped `utm_content` is not on the roster. See
+`docs/ROSTER_COVERAGE.md`.
+
 Audit output supports `text`, `json`, `csv`, and `html`. HTML reports are
 self-contained, escape all dynamic content, and can be shared offline:
 
@@ -491,6 +496,8 @@ The included example workflow is at `.github/workflows/example-audit.yml`.
 | `CLK131` | error | UTM value contains ASCII control characters (newline, tab, CR, NUL, DEL) that split exports or mismatch analytics dimensions |
 | `CLK132` | error | Raw URL contains whitespace (space, tab, newline, or Unicode separator) that splits or encodes the link when pasted |
 | `CLK133` | error | URL starts with a doubled `http(s)://` scheme from concatenating a scheme onto an absolute URL |
+| `CLK201` | error | Roster `placement_id` never appears as `utm_content` in shipped links (requires `--roster`) |
+| `CLK202` | warning | Shipped `utm_content` value is not on the roster (requires `--roster`) |
 
 Batch duplicate-placement failures are reported in the row's `issues` field
 before URL generation and do not receive a `CLK` code because they concern the
