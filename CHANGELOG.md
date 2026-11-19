@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added optional roster coverage checks via `clk audit --roster roster.csv`.
+  **CLK201** errors when a planned `placement_id` never appears as
+  `utm_content` in shipped links; **CLK202** warns when a shipped
+  `utm_content` is not on the roster. Audits without `--roster` are unchanged.
+  See `docs/ROSTER_COVERAGE.md`.
 - Added **CLK131** detection for ASCII control characters inside UTM values
   (newline, tab, CR, NUL, DEL, and other C0 controls). Spreadsheet paste and
   multi-line CMS cells otherwise ship distinct analytics dimensions and can
